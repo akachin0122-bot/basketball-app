@@ -20,36 +20,6 @@
             margin: 0;
             padding: 0;
         }
-        #auth-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .auth-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 360px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .auth-card input {
-            width: 100%;
-            padding: 0.75rem;
-            font-size: 1rem;
-            margin: 1rem 0;
-            box-sizing: border-box;
-            text-align: center;
-            letter-spacing: 0.2rem;
-        }
         header {
             background-color: var(--primary-color);
             color: white;
@@ -131,34 +101,35 @@
             font-size: 0.85rem;
         }
         .calendar-cell {
-            min-height: 105px;
+            min-height: 80px;
             border: 1px solid var(--border-color);
-            padding: 4px;
+            padding: 6px;
             background: #fff;
             text-align: left;
             position: relative;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
         .calendar-cell.practice {
-            background-color: #eff6ff;
-            border-color: #bfdbfe;
+            background-color: #f8fafc;
         }
         .calendar-cell .date-num {
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
-        .badge {
+        .practice-dot-box {
+            margin-top: 8px;
+            text-align: center;
+        }
+        .practice-dot {
             display: inline-block;
-            font-size: 0.6rem;
-            padding: 1px 3px;
-            border-radius: 4px;
-            margin-top: 2px;
+            background: #2563eb;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
         }
-        .badge-practice { background: #dbeafe; color: #1e40af; }
-        .badge-time { background: #e0f2fe; color: #0369a1; display: block; margin-top: 1px; }
-        .badge-duty { background: #fef3c7; color: #92400e; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;}
-        .badge-memo { background: #f3e8ff; color: #6b21a8; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;}
         
         button.btn {
             background-color: var(--primary-color);
@@ -240,18 +211,7 @@
     </style>
 </head>
 <body>
-
-<!-- 合言葉認証画面 -->
-<div id="auth-screen">
-    <div class="auth-card">
-        <h3>🔒 チーム認証</h3>
-        <p style="font-size: 0.85rem; color: #64748b;">合言葉を入力してください。</p>
-        <input type="password" id="passcode-input" placeholder="合言葉" onkeydown="if(event.key === 'Enter') checkPasscode()">
-        <button class="btn" style="width: 100%;" onclick="checkPasscode()">認証して開く</button>
-        <p id="auth-error" style="color: #ef4444; font-size: 0.8rem; margin-top: 0.75rem; display: none;">合言葉が違います。</p>
-    </div>
-</div>
-<header>
+    <header>
     <h1>🏀 バスケチーム出欠・当番管理 <span id="sync-status"></span></h1>
     <div class="family-selector-box">
         👤 わが家: 
@@ -339,26 +299,10 @@
 </div>
 
 <script>
-    const CORRECT_PASSCODE = "8745";
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyF6NodGfxKpwCsTTmwIfKfBIGNXThhSMFrgsy73bl_YlWZX1gLajJcYUPMNyBsKlyT/exec";
-
-    function checkPasscode() {
-        const inputVal = document.getElementById('passcode-input').value;
-        const errorMsg = document.getElementById('auth-error');
-        if (inputVal === CORRECT_PASSCODE) {
-            document.getElementById('auth-screen').style.display = 'none';
-            localStorage.setItem('isAuth', '8745');
-            loadDataFromCloud();
-        } else {
-            errorMsg.style.display = 'block';
-        }
-    }
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
 
     window.addEventListener('DOMContentLoaded', () => {
-        if (localStorage.getItem('isAuth') === '8745') {
-            document.getElementById('auth-screen').style.display = 'none';
-            loadDataFromCloud();
-        }
+        loadDataFromCloud();
     });
 
     let currentYear = 2026;
@@ -378,9 +322,22 @@
     let attendanceData = {};
     let manualDutyData = {};
 
+    function cleanDateStr(rawDate) {
+        if (!rawDate) return '';
+        let str = String(rawDate).trim();
+        if (str.includes('T')) {
+            str = str.split('T')[0];
+        }
+        const match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            return str;
+        }
+        return '';
+    }
+
     function loadDataFromCloud() {
         const statusEl = document.getElementById('sync-status');
-        statusEl.textContent = "（同期中...）";
+        if(statusEl) statusEl.textContent = "（同期中...）";
         
         fetch(GAS_URL + "?action=getData")
             .then(res => res.json())
@@ -392,44 +349,58 @@
                     if (data.practices && data.practices.length > 0) {
                         practiceData = {};
                         data.practices.forEach(p => {
-                            practiceData[p.date] = { isPractice: p.isPractice === true || p.isPractice === 'true', startTime: p.startTime, endTime: p.endTime, memo: p.memo };
+                            let cleanDate = cleanDateStr(p.date);
+                            if (cleanDate) {
+                                practiceData[cleanDate] = { isPractice: p.isPractice === true || p.isPractice === 'true', startTime: p.startTime, endTime: p.endTime, memo: p.memo };
+                            }
                         });
                     }
                     if (data.attendance && data.attendance.length > 0) {
                         attendanceData = {};
                         data.attendance.forEach(a => {
-                            if (!attendanceData[a.date]) attendanceData[a.date] = {};
-                            attendanceData[a.date][a.childName] = a.status;
+                            let cleanDate = cleanDateStr(a.date);
+                            if (cleanDate) {
+                                if (!attendanceData[cleanDate]) attendanceData[cleanDate] = {};
+                                attendanceData[cleanDate][a.childName] = a.status;
+                            }
                         });
                     }
-                    statusEl.textContent = "（同期完了）";
-                    setTimeout(() => { statusEl.textContent = ""; }, 2000);
+                    if(statusEl) {
+                        statusEl.textContent = "（同期完了）";
+                        setTimeout(() => { statusEl.textContent = ""; }, 2000);
+                    }
                 }
                 renderCalendar();
             })
             .catch(err => {
                 console.error(err);
-                statusEl.textContent = "（オフライン稼働）";
+                if(statusEl) statusEl.textContent = "（オフライン稼働）";
                 renderCalendar();
             });
     }
 
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
-        statusEl.textContent = "（保存中...）";
+        if(statusEl) statusEl.textContent = "（保存中...）";
 
         let practicesArr = [];
         Object.keys(practiceData).forEach(date => {
-            let p = practiceData[date];
-            practicesArr.push({ date: date, isPractice: p.isPractice, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
+            let cleanDate = cleanDateStr(date);
+            if (cleanDate) {
+                let p = practiceData[date];
+                practicesArr.push({ date: cleanDate, isPractice: p.isPractice, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
+            }
         });
 
         let attendanceArr = [];
         Object.keys(attendanceData).forEach(date => {
-            let kids = attendanceData[date];
-            Object.keys(kids).forEach(childName => {
-                attendanceArr.push({ date: date, childName: childName, status: kids[childName] });
-            });
+            let cleanDate = cleanDateStr(date);
+            if (cleanDate) {
+                let kids = attendanceData[date];
+                Object.keys(kids).forEach(childName => {
+                    attendanceArr.push({ date: cleanDate, childName: childName, status: kids[childName] });
+                });
+            }
         });
 
         let postData = {
@@ -446,15 +417,17 @@
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                statusEl.textContent = "（保存完了）";
-                setTimeout(() => { statusEl.textContent = ""; }, 2000);
+                if(statusEl) {
+                    statusEl.textContent = "（保存完了）";
+                    setTimeout(() => { statusEl.textContent = ""; }, 2000);
+                }
             } else {
-                statusEl.textContent = "（保存失敗）";
+                if(statusEl) statusEl.textContent = "（保存失敗）";
             }
         })
         .catch(err => {
             console.error(err);
-            statusEl.textContent = "（通信エラー）";
+            if(statusEl) statusEl.textContent = "（通信エラー）";
         });
     }
 
@@ -516,7 +489,8 @@
 
     function getDutyMap() {
         let practiceDates = Object.keys(practiceData).filter(d => {
-            return d.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+            let cleanD = cleanDateStr(d);
+            return cleanD && cleanD.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
         }).sort();
 
         let dutyCounter = 0;
@@ -565,7 +539,6 @@
 
         const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
         const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
-        let dutyMap = getDutyMap();
 
         for (let i = 0; i < firstDayIndex; i++) {
             const cell = document.createElement('div');
@@ -581,18 +554,7 @@
             
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
                 cell.classList.add('practice');
-                html += `<span class="badge badge-practice">練習</span>`;
-                let p = practiceData[dateStr];
-                if (p.startTime && p.endTime) {
-                    html += `<span class="badge badge-time">🕒${p.startTime}-${p.endTime}</span>`;
-                }
-                if (dutyMap[dateStr]) {
-                    html += `<span class="badge badge-duty" title="当番">当:${dutyMap[dateStr]}</span>`;
-                }
-                if (p.memo) {
-                    let shortMemo = p.memo.length > 5 ? p.memo.substring(0, 5) + '…' : p.memo;
-                    html += `<span class="badge badge-memo" title="${p.memo}">📝${shortMemo}</span>`;
-                }
+                html += `<div class="practice-dot-box"><span class="practice-dot">● 練習</span></div>`;
             }
             cell.innerHTML = html;
             cell.onclick = () => openDayModal(dateStr);
@@ -606,7 +568,8 @@
         else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         renderCalendar();
     }
-function openDayModal(dateStr) {
+
+    function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "" };
@@ -821,16 +784,20 @@ function openDayModal(dateStr) {
         updateGlobalFamilySelect();
         saveDataToCloud();
     }
-
-    function updateAttendanceSelect() {
+  function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
         if(!select) return;
         select.innerHTML = '';
         
-        let practiceDates = Object.keys(practiceData).filter(d => practiceData[d].isPractice).sort();
+        let practiceDates = Object.keys(practiceData).filter(d => {
+            let cleanD = cleanDateStr(d);
+            return cleanD && practiceData[d].isPractice;
+        }).map(d => cleanDateStr(d)).sort();
+
+        practiceDates = [...new Set(practiceDates)];
         
         practiceDates.forEach(d => {
-            let pInfo = practiceData[d];
+            let pInfo = practiceData[d] || { startTime: '19:00', endTime: '21:00' };
             const opt = document.createElement('option');
             opt.value = d;
             opt.textContent = `${d} (${pInfo.startTime || '19:00'}-${pInfo.endTime || '21:00'})`;
@@ -900,3 +867,4 @@ function openDayModal(dateStr) {
 
 </body>
 </html>
+   
