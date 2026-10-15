@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バスケチーム出欠・当番管理アプリ</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+        /* ロック画面用スタイル */
+        #auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .auth-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .auth-card input {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            margin: 1rem 0;
+            box-sizing: border-box;
+            text-align: center;
+            letter-spacing: 0.2rem;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+        }
+        .family-selector-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .family-selector-box select {
+            background: white;
+            color: var(--text-color);
+            font-weight: bold;
+            margin-left: 0.3rem;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        nav button {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+        }
+        nav button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .container {
+            max-width: 800px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+        .view-section {
+            display: none;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .view-section.active {
+            display: block;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+        }
+        .calendar-day-header {
+            font-weight: bold;
+            padding: 0.5rem;
+            background: #f1f5f9;
+            font-size: 0.85rem;
+        }
+        .calendar-cell {
+            min-height: 105px;
+            border: 1px solid var(--border-color);
+            padding: 4px;
+            background: #fff;
+            text-align: left;
+            position: relative;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .calendar-cell.practice {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .calendar-cell .date-num {
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            padding: 1px 3px;
+            border-radius: 4px;
+            margin-top: 2px;
+        }
+        .badge-practice { background: #dbeafe; color: #1e40af; }
+        .badge-time { background: #e0f2fe; color: #0369a1; display: block; margin-top: 1px; }
+        .badge-duty { background: #fef3c7; color: #92400e; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;}
+        .badge-memo { background: #f3e8ff; color: #6b21a8; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;}
+        
+        button.btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button.btn:hover { background-color: var(--primary-hover); }
+        button.btn-danger { background-color: #ef4444; }
+        button.btn-danger:hover { background-color: #dc2626; }
+        button.btn-secondary { background-color: #64748b; }
+        button.btn-secondary:hover { background-color: #475569; }
+        button.btn-warning { background-color: #d97706; }
+        button.btn-warning:hover { background-color: #b45309; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        th { background: #f8fafc; }
+        
+        .summary-box {
+            display: flex;
+            gap: 1rem;
+            background: #f1f5f9;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        select, input[type="time"], input[type="text"], textarea {
+            padding: 0.4rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+        .modal-tab-btn {
+            flex: 1;
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            color: #64748b;
+            text-align: center;
+        }
+        .modal-tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+        .modal-tab-content {
+            display: none;
+        }
+        .modal-tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 合言葉認証画面 -->
+<div id="auth-screen">
+    <div class="auth-card">
+        <h3>🔒 チーム認証</h3>
+        <p style="font-size: 0.85rem; color: #64748b;">関係者用の合言葉を入力してください。</p>
+        <input type="password" id="passcode-input" placeholder="合言葉（例: 1234）" onkeydown="if(event.key === 'Enter') checkPasscode()">
+        <button class="btn" style="width: 100%;" onclick="checkPasscode()">認証して開く</button>
+        <p id="auth-error" style="color: #ef4444; font-size: 0.8rem; margin-top: 0.75rem; display: none;">合言葉が違います。</p>
+    </div>
+</div>
+
+<header>
+    <h1>🏀 バスケチーム出欠・当番管理</h1>
+    <div class="family-selector-box">
+        👤 わが家: 
+        <select id="global-my-family" onchange="changeMyFamily(this.value)"></select>
+    </div>
+</header>
+
+<nav>
+    <button class="active" onclick="switchView('calendar', event)">カレンダー</button>
+    <button onclick="switchView('attendance', event)">出欠一覧</button>
+    <button onclick="switchView('master', event)">当番順番マスタ</button>
+</nav>
+
+<div class="container">
+    <!-- 1. カレンダー画面 -->
+    <div id="view-calendar" class="view-section active">
+        <div class="calendar-header">
+            <button class="btn" onclick="changeMonth(-1)">前の月</button>
+            <h2 id="calendar-title" style="margin:0;"></h2>
+            <button class="btn" onclick="changeMonth(1)">次の月</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-top: 1rem;">
+            💡 日付をタップすると、わが家の出欠連絡や練習設定・備考入力が行えます。
+        </p>
+    </div>
+
+    <!-- 2. 出欠確認一覧画面 -->
+    <div id="view-attendance" class="view-section">
+        <h2>練習日別 出欠確認一覧</h2>
+        <p style="font-size: 0.85rem; color: #64748b;">連絡がない場合は自動的に「参加」として集計されます。</p>
+        <label>練習日選択: </label>
+        <select id="attendance-date-select" onchange="renderAttendanceList()" style="padding: 0.4rem; margin-bottom: 1rem;"></select>
+        
+        <div id="attendance-summary" class="summary-box"></div>
+        <div id="attendance-list-container"></div>
+    </div>
+
+    <!-- 3. 当番順番マスタ画面 -->
+    <div id="view-master" class="view-section">
+        <h2>当番順番マスタ設定</h2>
+        <p style="font-size: 0.85rem; color: #64748b;">1列目の名前（上の子）を基準に上から順番に当番が回ります（最大3人まで）。</p>
+        
+        <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+            <h3 id="form-title">世帯の追加</h3>
+            <input type="hidden" id="edit-id" value="">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                <input type="text" id="child-1" placeholder="子1人目（上の子）" style="width: 130px;">
+                <input type="text" id="child-2" placeholder="子2人目（任意）" style="width: 130px;">
+                <input type="text" id="child-3" placeholder="子3人目（任意）" style="width: 130px;">
+            </div>
+            <button class="btn" id="save-btn" onclick="saveMasterItem()">追加する</button>
+            <button class="btn btn-secondary" id="cancel-btn" onclick="resetMasterForm()" style="display:none;">キャンセル</button>
+        </div>
+
+        <table id="master-table">
+            <thead>
+                <tr>
+                    <th>順番</th>
+                    <th>子どもたちの名前</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="master-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+  <!-- モーダル -->
+<div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
+    <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
+        <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
+        
+        <div class="modal-tabs" id="modal-tabs-header" style="display:none;">
+            <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
+            <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習設定</button>
+        </div>
+
+        <div id="modal-content"></div>
+
+        <div style="text-align: right; margin-top: 1.5rem;">
+            <button class="btn btn-secondary" onclick="closeModal()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ▼ ここでチームの合言葉を設定できます
+    const CORRECT_PASSCODE = "8745";
+
+    function checkPasscode() {
+        const inputVal = document.getElementById('passcode-input').value;
+        const errorMsg = document.getElementById('auth-error');
+        if (inputVal === CORRECT_PASSCODE) {
+            document.getElementById('auth-screen').style.display = 'none';
+            localStorage.setItem('isAuth', 'true');
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    }
+
+    // 既に認証済みなら最初から非表示にする
+    window.addEventListener('DOMContentLoaded', () => {
+        if (localStorage.getItem('isAuth') === 'true') {
+            document.getElementById('auth-screen').style.display = 'none';
+        }
+    });
+
+    let currentYear = 2026;
+    let currentMonth = 9; // 10月
+
+    let masterData = [
+        { id: 1, children: ["きはる", "えりみ"] },
+        { id: 2, children: ["えな", "ほの"] },
+        { id: 3, children: ["きほ"] },
+        { id: 4, children: ["りん"] },
+        { id: 5, children: ["かりん", "りりな"] }
+    ];
+
+    let myFamilyId = localStorage.getItem('myFamilyId') ? Number(localStorage.getItem('myFamilyId')) : 1;
+
+    let practiceData = {};
+    let attendanceData = {};
+    let manualDutyData = {};
+
+    function initDefaultPractices() {
+        const date = new Date(currentYear, currentMonth, 1);
+        while (date.getMonth() === currentMonth) {
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek === 2 || dayOfWeek === 3 || dayOfWeek === 5) {
+                const dateStr = formatDateKey(date);
+                if (!practiceData[dateStr]) {
+                    practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "" };
+                }
+            }
+            date.setDate(date.getDate() + 1);
+        }
+    }
+
+    function formatDateKey(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getAllChildren() {
+        let list = [];
+        masterData.forEach(item => { list = list.concat(item.children); });
+        return list;
+    }
+
+    function updateGlobalFamilySelect() {
+        const select = document.getElementById('global-my-family');
+        select.innerHTML = '';
+        masterData.forEach(item => {
+            let familyName = item.children[0] + "家";
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = familyName;
+            if (item.id === myFamilyId) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+
+        if (!masterData.some(item => item.id === myFamilyId) && masterData.length > 0) {
+            myFamilyId = masterData[0].id;
+            select.value = myFamilyId;
+        }
+    }
+
+    function changeMyFamily(id) {
+        myFamilyId = Number(id);
+        localStorage.setItem('myFamilyId', myFamilyId);
+    }
+
+    function getDutyMap() {
+        let practiceDates = Object.keys(practiceData).filter(d => {
+            return d.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+        }).sort();
+
+        let dutyCounter = 0;
+        let dutyMap = {};
+        practiceDates.forEach(d => {
+            if (manualDutyData[d]) {
+                dutyMap[d] = manualDutyData[d];
+            } else if (masterData.length > 0) {
+                let assignedFamily = masterData[dutyCounter % masterData.length];
+                dutyMap[d] = assignedFamily.children[0] + "家";
+                dutyCounter++;
+            } else {
+                dutyMap[d] = "未設定";
+            }
+        });
+        return dutyMap;
+    }
+
+    function switchView(viewName, event) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+        document.getElementById(`view-${viewName}`).classList.add('active');
+        if (event && event.target) { event.target.classList.add('active'); }
+        
+        updateGlobalFamilySelect();
+
+        if (viewName === 'attendance') { updateAttendanceSelect(); }
+        else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
+    }
+
+    function renderCalendar() {
+        initDefaultPractices();
+        updateGlobalFamilySelect();
+        document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+
+        ['日', '月', '火', '水', '木', '金', '土'].forEach(w => {
+            const div = document.createElement('div');
+            div.className = 'calendar-day-header';
+            div.textContent = w;
+            grid.appendChild(div);
+        });
+
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+        let dutyMap = getDutyMap();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-cell';
+            grid.appendChild(cell);
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-cell';
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            let html = `<div class="date-num">${day}</div>`;
+            
+            if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
+                cell.classList.add('practice');
+                html += `<span class="badge badge-practice">練習</span>`;
+                let p = practiceData[dateStr];
+                if (p.startTime && p.endTime) {
+                    html += `<span class="badge badge-time">🕒${p.startTime}-${p.endTime}</span>`;
+                }
+                if (dutyMap[dateStr]) {
+                    html += `<span class="badge badge-duty" title="当番">当:${dutyMap[dateStr]}</span>`;
+                }
+                if (p.memo) {
+                    let shortMemo = p.memo.length > 5 ? p.memo.substring(0, 5) + '…' : p.memo;
+                    html += `<span class="badge badge-memo" title="${p.memo}">📝${shortMemo}</span>`;
+                }
+            }
+            cell.innerHTML = html;
+            cell.onclick = () => openDayModal(dateStr);
+            grid.appendChild(cell);
+        }
+    }
+
+    function changeMonth(direction) {
+        currentMonth += direction;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        renderCalendar();
+    }
+
+    function openDayModal(dateStr) {
+        const modal = document.getElementById('day-modal');
+        document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
+        let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "" };
+        let isPrac = pData.isPractice;
+        let dutyMap = getDutyMap();
+        let currentDuty = dutyMap[dateStr] || "未設定";
+
+        const tabsHeader = document.getElementById('modal-tabs-header');
+        const contentDiv = document.getElementById('modal-content');
+
+        if (!isPrac) {
+            tabsHeader.style.display = 'none';
+            contentDiv.innerHTML = `
+                <p>এই日は現在、練習日ではありません。</p>
+                <button class="btn" onclick="addCustomPractice('${dateStr}')">その他練習日として追加する</button>
+            `;
+        } else {
+            tabsHeader.style.display = 'flex';
+            
+            let dutyOptions = '';
+            masterData.forEach(family => {
+                let familyName = family.children[0] + "家";
+                let selected = (currentDuty === familyName) ? 'selected' : '';
+                dutyOptions += `<option value="${familyName}" ${selected}>${familyName}</option>`;
+            });
+
+            let myFamily = masterData.find(item => item.id === myFamilyId) || masterData[0];
+
+            let attendanceHtml = `
+                <div class="modal-tab-content active" id="tab-attendance">
+                    <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily.children[0]}家</strong> のお子さんの出欠状況です。</p>
+            `;
+            if (myFamily) {
+                attendanceHtml += `<div style="background:#f8fafc; padding:0.75rem; border-radius:6px;">`;
+                myFamily.children.forEach(childName => {
+                    if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
+                    let currentStatus = attendanceData[dateStr][childName] || '参加';
+                    attendanceHtml += `
+                        <div style="margin-bottom: 0.75rem;">
+                            <strong>${childName}</strong><br>
+                            <select onchange="saveAttendance('${dateStr}', '${childName}', this.value)" style="margin-top: 4px; width: 100%;">
+                                <option value="参加" ${currentStatus === '参加' ? 'selected' : ''}>参加</option>
+                                <option value="遅刻" ${currentStatus === '遅刻' ? 'selected' : ''}>遅刻</option>
+                                <option value="欠席(病気)" ${currentStatus === '欠席(病気)' ? 'selected' : ''}>欠席（病気）</option>
+                                <option value="欠席(家庭都合)" ${currentStatus === '欠席(家庭都合)' ? 'selected' : ''}>欠席（家庭都合）</option>
+                            </select>
+                        </div>
+                    `;
+                });
+                attendanceHtml += `</div>`;
+            }
+            attendanceHtml += `</div>`;
+
+            let settingsHtml = `
+                <div class="modal-tab-content" id="tab-settings">
+                    <div style="margin-bottom: 0.75rem; background: #fef3c7; padding: 0.5rem; border-radius: 4px;">
+                        <label><strong>当番担当:</strong></label><br>
+                        <select onchange="changeDuty('${dateStr}', this.value)" style="margin-top: 4px; width: 100%;">
+                            ${dutyOptions}
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 0.75rem;">
+                        <label><strong>練習時間:</strong></label><br>
+                        <input type="time" id="modal-start" value="${pData.startTime || '19:00'}" onchange="updatePracticeInfo('${dateStr}')"> 〜 
+                        <input type="time" id="modal-end" value="${pData.endTime || '21:00'}" onchange="updatePracticeInfo('${dateStr}')">
+                    </div>
+                    <div style="margin-bottom: 0.75rem;">
+                        <label><strong>備考（お知らせなど）:</strong></label><br>
+                        <textarea id="modal-memo" rows="3" placeholder="例: 体育館の準備あり / 持ち物など" oninput="updatePracticeInfo('${dateStr}')" style="width: 100%;">${pData.memo || ''}</textarea>
+                    </div>
+                    <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の練習を削除する</button>
+                </div>
+            `;
+
+            contentDiv.innerHTML = attendanceHtml + settingsHtml;
+        }
+
+        modal.style.display = 'flex';
+    }
+
+function switchModalTab(tabName, event) {
+        document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+
+        event.target.classList.add('active');
+        if (tabName === 'attendance') {
+            document.getElementById('tab-attendance').classList.add('active');
+        } else if (tabName === 'settings') {
+            document.getElementById('tab-settings').classList.add('active');
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('day-modal').style.display = 'none';
+        renderCalendar();
+    }
+
+    function changeDuty(dateStr, newDuty) {
+        manualDutyData[dateStr] = newDuty;
+        renderCalendar();
+    }
+
+    function addCustomPractice(dateStr) {
+        practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "" };
+        openDayModal(dateStr);
+    }
+
+    function removePractice(dateStr) {
+        if (practiceData[dateStr]) { practiceData[dateStr].isPractice = false; }
+        openDayModal(dateStr);
+    }
+
+    function updatePracticeInfo(dateStr) {
+        const start = document.getElementById('modal-start').value;
+        const end = document.getElementById('modal-end').value;
+        const memo = document.getElementById('modal-memo').value;
+        if (practiceData[dateStr]) {
+            practiceData[dateStr].startTime = start;
+            practiceData[dateStr].endTime = end;
+            practiceData[dateStr].memo = memo;
+        }
+    }
+
+    function saveAttendance(dateStr, childName, status) {
+        if (!attendanceData[dateStr]) { attendanceData[dateStr] = {}; }
+        attendanceData[dateStr][childName] = status;
+    }
+
+    function renderMasterTable() {
+        const tbody = document.getElementById('master-tbody');
+        tbody.innerHTML = '';
+        masterData.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.children.join('、 ')}</td>
+                <td>
+                    <button class="btn btn-warning" onclick="editMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-right: 4px;">編集</button>
+                    <button class="btn btn-danger" onclick="deleteMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">削除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function saveMasterItem() {
+        const editId = document.getElementById('edit-id').value;
+        const c1 = document.getElementById('child-1').value.trim();
+        const c2 = document.getElementById('child-2').value.trim();
+        const c3 = document.getElementById('child-3').value.trim();
+
+        if (!c1) {
+            alert('1人目の名前は必須です。');
+            return;
+        }
+
+        let childrenArr = [c1];
+        if (c2) childrenArr.push(c2);
+        if (c3) childrenArr.push(c3);
+
+        if (editId) {
+            let item = masterData.find(m => m.id == editId);
+            if (item) {
+                item.children = childrenArr;
+            }
+        } else {
+            const newId = masterData.length > 0 ? masterData[masterData.length - 1].id + 1 : 1;
+            masterData.push({ id: newId, children: childrenArr });
+        }
+
+        resetMasterForm();
+        renderMasterTable();
+        updateGlobalFamilySelect();
+    }
+
+    function editMasterItem(id) {
+        let item = masterData.find(m => m.id === id);
+        if (!item) return;
+
+        document.getElementById('edit-id').value = item.id;
+        document.getElementById('child-1').value = item.children[0] || '';
+        document.getElementById('child-2').value = item.children[1] || '';
+        document.getElementById('child-3').value = item.children[2] || '';
+
+        document.getElementById('form-title').textContent = '世帯の編集';
+        document.getElementById('save-btn').textContent = '保存する';
+        document.getElementById('cancel-btn').style.display = 'inline-block';
+    }
+
+    function resetMasterForm() {
+        document.getElementById('edit-id').value = '';
+        document.getElementById('child-1').value = '';
+        document.getElementById('child-2').value = '';
+        document.getElementById('child-3').value = '';
+
+        document.getElementById('form-title').textContent = '世帯の追加';
+        document.getElementById('save-btn').textContent = '追加する';
+        document.getElementById('cancel-btn').style.display = 'none';
+    }
+
+    function deleteMasterItem(id) {
+        masterData = masterData.filter(item => item.id !== id);
+        renderMasterTable();
+        updateGlobalFamilySelect();
+    }
+
+    function updateAttendanceSelect() {
+        const select = document.getElementById('attendance-date-select');
+        select.innerHTML = '';
+        
+        let practiceDates = Object.keys(practiceData).filter(d => practiceData[d].isPractice).sort();
+        
+        practiceDates.forEach(d => {
+            let pInfo = practiceData[d];
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = `${d} (${pInfo.startTime || '19:00'}-${pInfo.endTime || '21:00'})`;
+            select.appendChild(opt);
+        });
+
+        const todayStr = formatDateKey(new Date());
+        let defaultDate = practiceDates.find(d => d >= todayStr);
+        if (!defaultDate && practiceDates.length > 0) {
+            defaultDate = practiceDates[practiceDates.length - 1];
+        }
+
+        if (defaultDate) {
+            select.value = defaultDate;
+        }
+
+        renderAttendanceList();
+    }
+
+    function renderAttendanceList() {
+        const select = document.getElementById('attendance-date-select');
+        const container = document.getElementById('attendance-list-container');
+        const summaryBox = document.getElementById('attendance-summary');
+        const selectedDate = select.value;
+
+        if (!selectedDate) {
+            summaryBox.innerHTML = '';
+            container.innerHTML = '<p>練習日がありません。</p>';
+            return;
+        }
+
+        let allChildren = getAllChildren();
+        let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
+
+        allChildren.forEach(name => {
+            let status = '参加';
+            if (attendanceData[selectedDate] && attendanceData[selectedDate][name]) {
+                status = attendanceData[selectedDate][name];
+            }
+            if (status === '参加') counts.参加++;
+            else if (status === '遅刻') counts.遅刻++;
+            else if (status.includes('欠席')) counts.欠席++;
+        });
+
+        summaryBox.innerHTML = `
+            <span style="color: #16a34a;">参加: ${counts.参加}人</span>
+            <span style="color: #ca8a04;">遅刻: ${counts.遅刻}人</span>
+            <span style="color: #dc2626;">欠席: ${counts.欠席}人</span>
+        `;
+
+        let html = `<table><thead><tr><th>名前</th><th>出欠状況</th></tr></thead><tbody>`;
+        allChildren.forEach(name => {
+            let status = '参加';
+            let badgeStyle = 'color: #16a34a; font-weight: bold;';
+            if (attendanceData[selectedDate] && attendanceData[selectedDate][name]) {
+                status = attendanceData[selectedDate][name];
+                if (status.includes('欠席')) { badgeStyle = 'color: #dc2626; font-weight: bold;'; }
+                else if (status === '遅刻') { badgeStyle = 'color: #ca8a04; font-weight: bold;'; }
+            }
+            html += `<tr><td>${name}</td><td><span style="${badgeStyle}">${status}</span></td></tr>`;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    renderCalendar();
+</script>
+
+</body>
+</html>
