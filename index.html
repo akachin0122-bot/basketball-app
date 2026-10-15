@@ -246,12 +246,11 @@
     <div class="auth-card">
         <h3>🔒 チーム認証</h3>
         <p style="font-size: 0.85rem; color: #64748b;">関係者用の合言葉を入力してください。</p>
-        <input type="password" id="passcode-input" placeholder="合言葉（例: 1234）" onkeydown="if(event.key === 'Enter') checkPasscode()">
+        <input type="password" id="passcode-input" placeholder="合言葉" onkeydown="if(event.key === 'Enter') checkPasscode()">
         <button class="btn" style="width: 100%;" onclick="checkPasscode()">認証して開く</button>
         <p id="auth-error" style="color: #ef4444; font-size: 0.8rem; margin-top: 0.75rem; display: none;">合言葉が違います。</p>
     </div>
 </div>
-
 <header>
     <h1>🏀 バスケチーム出欠・当番管理 <span id="sync-status"></span></h1>
     <div class="family-selector-box">
@@ -341,14 +340,14 @@
 
 <script>
     const CORRECT_PASSCODE = "8745";
-    // 先ほど取得したスプレッドシートのウェブアプリURL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyF6NodGfxKpwCsTTmwIfKfBIGNXThhSMFrgsy73bl_YlWZX1gLajJcYUPMNyBsKlyT/exec";
-function checkPasscode() {
+
+    function checkPasscode() {
         const inputVal = document.getElementById('passcode-input').value;
         const errorMsg = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASSCODE) {
             document.getElementById('auth-screen').style.display = 'none';
-            localStorage.setItem('isAuth', 'true');
+            localStorage.setItem('isAuth', '8745');
             loadDataFromCloud();
         } else {
             errorMsg.style.display = 'block';
@@ -356,7 +355,7 @@ function checkPasscode() {
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        if (localStorage.getItem('isAuth') === 'true') {
+        if (localStorage.getItem('isAuth') === '8745') {
             document.getElementById('auth-screen').style.display = 'none';
             loadDataFromCloud();
         }
@@ -379,7 +378,6 @@ function checkPasscode() {
     let attendanceData = {};
     let manualDutyData = {};
 
-    // クラウドからデータ取得
     function loadDataFromCloud() {
         const statusEl = document.getElementById('sync-status');
         statusEl.textContent = "（同期中...）";
@@ -416,7 +414,6 @@ function checkPasscode() {
             });
     }
 
-    // クラウドへデータ保存
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         statusEl.textContent = "（保存中...）";
@@ -461,7 +458,7 @@ function checkPasscode() {
         });
     }
 
- function initDefaultPractices() {
+    function initDefaultPractices() {
         const date = new Date(currentYear, currentMonth, 1);
         let updated = false;
         while (date.getMonth() === currentMonth) {
@@ -609,8 +606,7 @@ function checkPasscode() {
         else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         renderCalendar();
     }
-
-    function openDayModal(dateStr) {
+function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "" };
@@ -726,7 +722,8 @@ function checkPasscode() {
         saveDataToCloud();
         openDayModal(dateStr);
     }
-function updatePracticeInfo(dateStr) {
+
+    function updatePracticeInfo(dateStr) {
         const start = document.getElementById('modal-start').value;
         const end = document.getElementById('modal-end').value;
         const memo = document.getElementById('modal-memo').value;
@@ -903,4 +900,3 @@ function updatePracticeInfo(dateStr) {
 
 </body>
 </html>
-
