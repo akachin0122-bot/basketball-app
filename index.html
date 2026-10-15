@@ -340,66 +340,25 @@
 </div>
 
 <script>
-    const CORRECT_PASSCODE = "1234";
+    const CORRECT_PASSCODE = "8745";
     // 先ほど取得したスプレッドシートのウェブアプリURL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyF6NodGfxKpwCsTTmwIfKfBIGNXThhSMFrgsy73bl_YlWZX1gLajJcYUPMNyBsKlyT/exec";
--2" placeholder="子2人目（任意）" style="width: 130px;">
-                <input type="text" id="child-3" placeholder="子3人目（任意）" style="width: 130px;">
-            </div>
-            <button class="btn" id="save-btn" onclick="saveMasterItem()">追加する</button>
-            <button class="btn btn-secondary" id="cancel-btn" onclick="resetMasterForm()" style="display:none;">キャンセル</button>
-        </div>
-
-        <table id="master-table">
-            <thead>
-                <tr>
-                    <th>順番</th>
-                    <th>子どもたちの名前</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="master-tbody"></tbody>
-        </table>
-    </div>
-</div>
-
-  <!-- モーダル -->
-<div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
-    <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
-        <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
-        
-        <div class="modal-tabs" id="modal-tabs-header" style="display:none;">
-            <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
-            <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習設定</button>
-        </div>
-
-        <div id="modal-content"></div>
-
-        <div style="text-align: right; margin-top: 1.5rem;">
-            <button class="btn btn-secondary" onclick="closeModal()">閉じる</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ▼ ここでチームの合言葉を設定できます
-    const CORRECT_PASSCODE = "8745";
-
-    function checkPasscode() {
+function checkPasscode() {
         const inputVal = document.getElementById('passcode-input').value;
         const errorMsg = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASSCODE) {
             document.getElementById('auth-screen').style.display = 'none';
             localStorage.setItem('isAuth', 'true');
+            loadDataFromCloud();
         } else {
             errorMsg.style.display = 'block';
         }
     }
 
-    // 既に認証済みなら最初から非表示にする
     window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-screen').style.display = 'none';
+            loadDataFromCloud();
         }
     });
 
@@ -420,18 +379,103 @@
     let attendanceData = {};
     let manualDutyData = {};
 
-    function initDefaultPractices() {
+    // クラウドからデータ取得
+    function loadDataFromCloud() {
+        const statusEl = document.getElementById('sync-status');
+        statusEl.textContent = "（同期中...）";
+        
+        fetch(GAS_URL + "?action=getData")
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.master && data.master.length > 0) {
+                        masterData = data.master;
+                    }
+                    if (data.practices && data.practices.length > 0) {
+                        practiceData = {};
+                        data.practices.forEach(p => {
+                            practiceData[p.date] = { isPractice: p.isPractice === true || p.isPractice === 'true', startTime: p.startTime, endTime: p.endTime, memo: p.memo };
+                        });
+                    }
+                    if (data.attendance && data.attendance.length > 0) {
+                        attendanceData = {};
+                        data.attendance.forEach(a => {
+                            if (!attendanceData[a.date]) attendanceData[a.date] = {};
+                            attendanceData[a.date][a.childName] = a.status;
+                        });
+                    }
+                    statusEl.textContent = "（同期完了）";
+                    setTimeout(() => { statusEl.textContent = ""; }, 2000);
+                }
+                renderCalendar();
+            })
+            .catch(err => {
+                console.error(err);
+                statusEl.textContent = "（オフライン稼働）";
+                renderCalendar();
+            });
+    }
+
+    // クラウドへデータ保存
+    function saveDataToCloud() {
+        const statusEl = document.getElementById('sync-status');
+        statusEl.textContent = "（保存中...）";
+
+        let practicesArr = [];
+        Object.keys(practiceData).forEach(date => {
+            let p = practiceData[date];
+            practicesArr.push({ date: date, isPractice: p.isPractice, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
+        });
+
+        let attendanceArr = [];
+        Object.keys(attendanceData).forEach(date => {
+            let kids = attendanceData[date];
+            Object.keys(kids).forEach(childName => {
+                attendanceArr.push({ date: date, childName: childName, status: kids[childName] });
+            });
+        });
+
+        let postData = {
+            practices: practicesArr,
+            attendance: attendanceArr,
+            master: masterData
+        };
+
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: "action=saveData&data=" + encodeURIComponent(JSON.stringify(postData)),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                statusEl.textContent = "（保存完了）";
+                setTimeout(() => { statusEl.textContent = ""; }, 2000);
+            } else {
+                statusEl.textContent = "（保存失敗）";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            statusEl.textContent = "（通信エラー）";
+        });
+    }
+
+ function initDefaultPractices() {
         const date = new Date(currentYear, currentMonth, 1);
+        let updated = false;
         while (date.getMonth() === currentMonth) {
             const dayOfWeek = date.getDay();
             if (dayOfWeek === 2 || dayOfWeek === 3 || dayOfWeek === 5) {
                 const dateStr = formatDateKey(date);
                 if (!practiceData[dateStr]) {
                     practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "" };
+                    updated = true;
                 }
             }
             date.setDate(date.getDate() + 1);
         }
+        if (updated) { saveDataToCloud(); }
     }
 
     function formatDateKey(date) {
@@ -449,6 +493,7 @@
 
     function updateGlobalFamilySelect() {
         const select = document.getElementById('global-my-family');
+        if(!select) return;
         select.innerHTML = '';
         masterData.forEach(item => {
             let familyName = item.children[0] + "家";
@@ -508,8 +553,10 @@
     function renderCalendar() {
         initDefaultPractices();
         updateGlobalFamilySelect();
-        document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
+        const titleEl = document.getElementById('calendar-title');
+        if(titleEl) titleEl.textContent = `${currentYear}年 ${currentMonth + 1}月`;
         const grid = document.getElementById('calendar-grid');
+        if(!grid) return;
         grid.innerHTML = '';
 
         ['日', '月', '火', '水', '木', '金', '土'].forEach(w => {
@@ -577,7 +624,7 @@
         if (!isPrac) {
             tabsHeader.style.display = 'none';
             contentDiv.innerHTML = `
-                <p>এই日は現在、練習日ではありません。</p>
+                <p>この日は現在、練習日ではありません。</p>
                 <button class="btn" onclick="addCustomPractice('${dateStr}')">その他練習日として追加する</button>
             `;
         } else {
@@ -594,7 +641,7 @@
 
             let attendanceHtml = `
                 <div class="modal-tab-content active" id="tab-attendance">
-                    <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily.children[0]}家</strong> のお子さんの出欠状況です。</p>
+                    <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況です。</p>
             `;
             if (myFamily) {
                 attendanceHtml += `<div style="background:#f8fafc; padding:0.75rem; border-radius:6px;">`;
@@ -644,7 +691,7 @@
         modal.style.display = 'flex';
     }
 
-function switchModalTab(tabName, event) {
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
 
@@ -658,25 +705,28 @@ function switchModalTab(tabName, event) {
 
     function closeModal() {
         document.getElementById('day-modal').style.display = 'none';
+        saveDataToCloud();
         renderCalendar();
     }
 
     function changeDuty(dateStr, newDuty) {
         manualDutyData[dateStr] = newDuty;
+        saveDataToCloud();
         renderCalendar();
     }
 
     function addCustomPractice(dateStr) {
         practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "" };
+        saveDataToCloud();
         openDayModal(dateStr);
     }
 
     function removePractice(dateStr) {
         if (practiceData[dateStr]) { practiceData[dateStr].isPractice = false; }
+        saveDataToCloud();
         openDayModal(dateStr);
     }
-
-    function updatePracticeInfo(dateStr) {
+function updatePracticeInfo(dateStr) {
         const start = document.getElementById('modal-start').value;
         const end = document.getElementById('modal-end').value;
         const memo = document.getElementById('modal-memo').value;
@@ -685,15 +735,18 @@ function switchModalTab(tabName, event) {
             practiceData[dateStr].endTime = end;
             practiceData[dateStr].memo = memo;
         }
+        saveDataToCloud();
     }
 
     function saveAttendance(dateStr, childName, status) {
         if (!attendanceData[dateStr]) { attendanceData[dateStr] = {}; }
         attendanceData[dateStr][childName] = status;
+        saveDataToCloud();
     }
 
     function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
+        if(!tbody) return;
         tbody.innerHTML = '';
         masterData.forEach((item, index) => {
             const tr = document.createElement('tr');
@@ -737,6 +790,7 @@ function switchModalTab(tabName, event) {
         resetMasterForm();
         renderMasterTable();
         updateGlobalFamilySelect();
+        saveDataToCloud();
     }
 
     function editMasterItem(id) {
@@ -768,10 +822,12 @@ function switchModalTab(tabName, event) {
         masterData = masterData.filter(item => item.id !== id);
         renderMasterTable();
         updateGlobalFamilySelect();
+        saveDataToCloud();
     }
 
     function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
+        if(!select) return;
         select.innerHTML = '';
         
         let practiceDates = Object.keys(practiceData).filter(d => practiceData[d].isPractice).sort();
@@ -801,6 +857,7 @@ function switchModalTab(tabName, event) {
         const select = document.getElementById('attendance-date-select');
         const container = document.getElementById('attendance-list-container');
         const summaryBox = document.getElementById('attendance-summary');
+        if(!select || !container || !summaryBox) return;
         const selectedDate = select.value;
 
         if (!selectedDate) {
@@ -842,9 +899,8 @@ function switchModalTab(tabName, event) {
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-
-    renderCalendar();
 </script>
 
 </body>
 </html>
+
