@@ -20,15 +20,17 @@
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #f1f5f9; font-size: 0.85rem; }
-        .calendar-cell { min-height: 80px; border: 1px solid var(--border); padding: 6px; background: #fff; text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; }
+        .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: #fff; text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; }
         .calendar-cell.practice { background-color: #f8fafc; }
         .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; }
-        .practice-dot-box { margin-top: 10px; text-align: center; }
-        .practice-dot { display: inline-block; color: var(--primary); font-size: 1.2rem; font-weight: bold; line-height: 1; }
+        .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
+        .practice-dot { display: inline-block; color: var(--primary); font-size: 1.1rem; font-weight: bold; line-height: 1; }
+        .calendar-duty-tag { font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 1px 3px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
         button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
         button.btn:hover { background-color: #1d4ed8; }
         button.btn-danger { background-color: #ef4444; }
         button.btn-secondary { background-color: #64748b; }
+        button.btn-warning { background-color: #d97706; }
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; font-size: 0.9rem; }
         th { background: #f8fafc; }
@@ -66,7 +68,7 @@
             <button class="btn" onclick="changeMonth(1)">次の月</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習設定ができます。</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
     </div>
 
     <div id="view-attendance" class="view-section">
@@ -100,9 +102,9 @@
 <div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;">
     <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
         <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
-        <div class="modal-tabs" id="modal-tabs-header" style="display:none;">
+        <div class="modal-tabs" id="modal-tabs-header">
             <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
-            <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習設定</button>
+            <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
         </div>
         <div id="modal-content"></div>
         <div style="text-align: right; margin-top: 1.5rem;">
@@ -116,7 +118,7 @@
     window.addEventListener('DOMContentLoaded', () => { loadDataFromCloud(); });
 
     let currentYear = 2026;
-    let currentMonth = 9;
+    let currentMonth = 9; // 10月
     let masterData = [
         { id: 1, children: ["きはる", "えりみ"] },
         { id: 2, children: ["えな", "ほの"] },
@@ -131,6 +133,14 @@
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
+        // タイムゾーンによる日付ズレを防ぐため、Dateオブジェクト経由で正確なYYYY-MM-DDを生成
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            let y = d.getFullYear();
+            let m = String(d.getMonth() + 1).padStart(2, '0');
+            let day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
         return (/^\d{4}-\d{2}-\d{2}$/.test(str)) ? str : '';
     }
 
@@ -148,7 +158,14 @@
                             let cleanDate = cleanDateStr(p.date);
                             let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
                             if (cleanDate && isPracVal) {
-                                practiceData[cleanDate] = { isPractice: true, startTime: p.startTime || "19:00", endTime: p.endTime || "21:00", memo: p.memo || "" };
+                                practiceData[cleanDate] = { 
+                                    isPractice: true, 
+                                    startTime: p.startTime || "19:00", 
+                                    endTime: p.endTime || "21:00", 
+                                    memo: p.memo || "",
+                                    duty: p.duty || "" 
+                                };
+                                if (p.duty) { manualDutyData[cleanDate] = p.duty; }
                             }
                         });
                     }
@@ -182,7 +199,8 @@
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
-                practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
+                let assignedDuty = manualDutyData[cleanDate] || p.duty || "";
+                practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo, duty: assignedDuty });
             }
         });
         let attendanceArr = [];
@@ -206,10 +224,6 @@
                 if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
             }
         });
-    }
-
-    function formatDateKey(date) {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
     function getAllChildren() {
@@ -237,7 +251,32 @@
         localStorage.setItem('myFamilyId', myFamilyId);
     }
 
-   function switchView(viewName, event) {
+    function getDutyMap() {
+        let practiceDates = Object.keys(practiceData).filter(d => {
+            let cleanD = cleanDateStr(d);
+            return cleanD && cleanD.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+        }).sort();
+
+        let dutyCounter = 0;
+        let dutyMap = {};
+        practiceDates.forEach(d => {
+            if (manualDutyData[d]) {
+                dutyMap[d] = manualDutyData[d];
+            } else if (practiceData[d] && practiceData[d].duty) {
+                dutyMap[d] = practiceData[d].duty;
+            } else if (masterData.length > 0) {
+                let assignedFamily = masterData[dutyCounter % masterData.length];
+                if (assignedFamily && assignedFamily.children && assignedFamily.children[0]) {
+                    dutyMap[d] = assignedFamily.children[0] + "家";
+                }
+                dutyCounter++;
+            } else {
+                dutyMap[d] = "未設定";
+            }
+        });
+        return dutyMap;
+    }
+function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
@@ -263,14 +302,22 @@
         for (let i = 0; i < firstDayIndex; i++) {
             grid.appendChild(document.createElement('div'));
         }
+
+        let dutyMap = getDutyMap();
+
         for (let day = 1; day <= totalDays; day++) {
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             let html = `<div class="date-num">${day}</div>`;
+            
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
                 cell.classList.add('practice');
-                html += `<div class="practice-dot-box"><span class="practice-dot">●</span></div>`;
+                html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
+                let dutyName = manualDutyData[dateStr] || dutyMap[dateStr] || "";
+                if (dutyName) {
+                    html += `<div class="calendar-duty-tag">当番:${dutyName}</div>`;
+                }
             }
             cell.innerHTML = html;
             cell.onclick = () => openDayModal(dateStr);
@@ -288,31 +335,74 @@
     function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
-        let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "" };
-        const tabsHeader = document.getElementById('modal-tabs-header');
+        let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
+        let dutyMap = getDutyMap();
+        let currentDuty = manualDutyData[dateStr] || pData.duty || dutyMap[dateStr] || "";
+
         const contentDiv = document.getElementById('modal-content');
 
-        if (!pData.isPractice) {
-            tabsHeader.style.display = 'none';
-            contentDiv.innerHTML = `<p>この日は現在、練習日ではありません。</p><button class="btn" onclick="addCustomPractice('${dateStr}')">その他練習日として追加する</button>`;
-        } else {
-            tabsHeader.style.display = 'flex';
-            let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
-            let attendanceHtml = `<div class="modal-tab-content active" id="tab-attendance"><p><strong>${myFamily.children[0]}家</strong> のお子さんの出欠</p>`;
+        let dutyOptions = '';
+        masterData.forEach(family => {
+            if (!family.children || !family.children[0]) return;
+            let familyName = family.children[0] + "家";
+            let selected = (currentDuty === familyName) ? 'selected' : '';
+            dutyOptions += `<option value="${familyName}" ${selected}>${familyName}</option>`;
+        });
+
+        let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
+
+        let attendanceHtml = `
+            <div class="modal-tab-content active" id="tab-attendance">
+                <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
+        `;
+        if (myFamily && myFamily.children) {
+            attendanceHtml += `<div style="background:#f8fafc; padding:0.75rem; border-radius:6px;">`;
             myFamily.children.forEach(childName => {
                 if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
                 let currentStatus = attendanceData[dateStr][childName] || '参加';
-                attendanceHtml += `<div style="margin-bottom:0.75rem;"><strong>${childName}</strong><br><select onchange="saveAttendance('${dateStr}', '${childName}', this.value)" style="width:100%;"><option value="参加" ${currentStatus==='参加'?'selected':''}>参加</option><option value="遅刻" ${currentStatus==='遅刻'?'selected':''}>遅刻</option><option value="欠席(病気)" ${currentStatus.includes('病気')?'selected':''}>欠席（病気）</option><option value="欠席(家庭都合)" ${currentStatus.includes('都合')?'selected':''}>欠席（家庭都合）</option></select></div>`;
+                attendanceHtml += `
+                    <div style="margin-bottom: 0.75rem;">
+                        <strong>${childName}</strong><br>
+                        <select onchange="saveAttendance('${dateStr}', '${childName}', this.value)" style="margin-top: 4px; width: 100%;">
+                            <option value="参加" ${currentStatus === '参加' ? 'selected' : ''}>参加</option>
+                            <option value="遅刻" ${currentStatus === '遅刻' ? 'selected' : ''}>遅刻</option>
+                            <option value="欠席(病気)" ${currentStatus === '欠席(病気)' ? 'selected' : ''}>欠席（病気）</option>
+                            <option value="欠席(家庭都合)" ${currentStatus === '欠席(家庭都合)' ? 'selected' : ''}>欠席（家庭都合）</option>
+                        </select>
+                    </div>
+                `;
             });
             attendanceHtml += `</div>`;
-
-            let settingsHtml = `<div class="modal-tab-content" id="tab-settings">
-                <div style="margin-bottom:0.75rem;"><label>練習時間:</label><br><input type="time" id="modal-start" value="${pData.startTime}" onchange="updatePracticeInfo('${dateStr}')"> 〜 <input type="time" id="modal-end" value="${pData.endTime}" onchange="updatePracticeInfo('${dateStr}')"></div>
-                <div style="margin-bottom:0.75rem;"><label>備考:</label><br><textarea id="modal-memo" rows="3" oninput="updatePracticeInfo('${dateStr}')" style="width:100%;">${pData.memo}</textarea></div>
-                <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の練習を削除</button>
-            </div>`;
-            contentDiv.innerHTML = attendanceHtml + settingsHtml;
         }
+        attendanceHtml += `</div>`;
+
+        let isPracChecked = pData.isPractice ? 'checked' : '';
+        let settingsHtml = `
+            <div class="modal-tab-content" id="tab-settings">
+                <div style="margin-bottom: 0.75rem; background: #fef3c7; padding: 0.5rem; border-radius: 4px;">
+                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>この日を練習日にする</strong></label>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <label><strong>当番担当:</strong></label><br>
+                    <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
+                        <option value="">（自動割り当て）</option>
+                        ${dutyOptions}
+                    </select>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <label><strong>練習時間:</strong></label><br>
+                    <input type="time" id="modal-start" value="${pData.startTime || '19:00'}" onchange="updatePracticeInfo('${dateStr}')"> 〜 
+                    <input type="time" id="modal-end" value="${pData.endTime || '21:00'}" onchange="updatePracticeInfo('${dateStr}')">
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <label><strong>備考（お知らせなど）:</strong></label><br>
+                    <textarea id="modal-memo" rows="3" oninput="updatePracticeInfo('${dateStr}')" style="width: 100%;">${pData.memo || ''}</textarea>
+                </div>
+                <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の練習を完全に消去</button>
+            </div>
+        `;
+
+        contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
 
@@ -329,23 +419,47 @@
         renderCalendar();
     }
 
-    function addCustomPractice(dateStr) {
-        practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "" };
+    function updatePracticeStatus(dateStr) {
+        const isChecked = document.getElementById('modal-is-practice').checked;
+        if (!practiceData[dateStr]) {
+            practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
+        }
+        practiceData[dateStr].isPractice = isChecked;
+        if (!isChecked) {
+            delete practiceData[dateStr];
+            delete manualDutyData[dateStr];
+        }
         saveDataToCloud();
-        openDayModal(dateStr);
+    }
+
+    function updatePracticeInfo(dateStr) {
+        const start = document.getElementById('modal-start').value;
+        const end = document.getElementById('modal-end').value;
+        const memo = document.getElementById('modal-memo').value;
+        const duty = document.getElementById('modal-duty').value;
+
+        if (!practiceData[dateStr]) {
+            practiceData[dateStr] = { isPractice: true };
+        }
+        practiceData[dateStr].startTime = start;
+        practiceData[dateStr].endTime = end;
+        practiceData[dateStr].memo = memo;
+        practiceData[dateStr].duty = duty;
+
+        if (duty) {
+            manualDutyData[dateStr] = duty;
+        } else {
+            delete manualDutyData[dateStr];
+        }
+        saveDataToCloud();
     }
 
     function removePractice(dateStr) {
         delete practiceData[dateStr];
+        delete manualDutyData[dateStr];
         saveDataToCloud();
-        openDayModal(dateStr);
-    }
-
-    function updatePracticeInfo(dateStr) {
-        practiceData[dateStr].startTime = document.getElementById('modal-start').value;
-        practiceData[dateStr].endTime = document.getElementById('modal-end').value;
-        practiceData[dateStr].memo = document.getElementById('modal-memo').value;
-        saveDataToCloud();
+        document.getElementById('day-modal').style.display = 'none';
+        renderCalendar();
     }
 
     function saveAttendance(dateStr, childName, status) {
@@ -356,9 +470,10 @@
 
     function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
+        if(!tbody) return;
         tbody.innerHTML = '';
         masterData.forEach((item, index) => {
-            tbody.innerHTML += `<tr><td>${index + 1}</td><td>${item.children.join('、 ')}</td><td><button class="btn btn-secondary" onclick="editMasterItem(${item.id})">編集</button> <button class="btn btn-danger" onclick="deleteMasterItem(${item.id})">削除</button></td></tr>`;
+            tbody.innerHTML += `<tr><td>${index + 1}</td><td>${item.children.join('、 ')}</td><td><button class="btn btn-warning" onclick="editMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-right: 4px;">編集</button> <button class="btn btn-danger" onclick="deleteMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">削除</button></td></tr>`;
         });
     }
 
@@ -397,7 +512,7 @@
     }
 
     function resetMasterForm() {
-        document.getElementById('edit-id').value = id = '';
+        document.getElementById('edit-id').value = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
@@ -415,13 +530,14 @@
 
     function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
+        if(!select) return;
         select.innerHTML = '';
         let practiceDates = Object.keys(practiceData).filter(d => cleanDateStr(d) && practiceData[d].isPractice).map(d => cleanDateStr(d)).sort();
         practiceDates = [...new Set(practiceDates)];
         practiceDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d;
-            opt.textContent = `${d} (${practiceData[d].startTime}-${practiceData[d].endTime})`;
+            opt.textContent = `${d} (${practiceData[d].startTime || '19:00'}-${practiceData[d].endTime || '21:00'})`;
             select.appendChild(opt);
         });
         renderAttendanceList();
@@ -431,6 +547,7 @@
         const select = document.getElementById('attendance-date-select');
         const container = document.getElementById('attendance-list-container');
         const summaryBox = document.getElementById('attendance-summary');
+        if(!select || !container || !summaryBox) return;
         const selectedDate = select.value;
         if (!selectedDate) { summaryBox.innerHTML = ''; container.innerHTML = '<p>練習日がありません。</p>'; return; }
 
