@@ -30,12 +30,11 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #f1f5f9; font-size: 0.85rem; }
         /* 変更後：背景を暗く、文字を白くする */
-.calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: var(--cell-bg); text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 4px; color: var(--text); }
-.calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; color: #f1f5f9; }
-        .calendar-cell.practice { background-color: #f8fafc; }
-        .calendar-cell.my-duty { background-color: #eff6ff; border: 2px solid var(--primary); }
-        .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; }
-        .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
+        .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: var(--cell-bg); text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 4px; color: var(--text); }
+        .calendar-cell.practice { background-color: #1e293b; }
+        .calendar-cell.my-duty { background-color: #1e3a8a; border: 2px solid #3b82f6; } 
+        .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; color: #f1f5f9; }
+    .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
         .practice-dot { display: inline-block; color: #64748b; font-size: 1.3rem; font-weight: bold; line-height: 1; }
         .practice-dot.my-dot { color: #e11d48; }
         button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
