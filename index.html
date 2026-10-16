@@ -22,11 +22,11 @@
         .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #f1f5f9; font-size: 0.85rem; }
         .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: #fff; text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; }
         .calendar-cell.practice { background-color: #f8fafc; }
-        .calendar-cell.my-duty { background-color: #eff6ff; border: 2px solid var(--primary); } /* 🌟 自分の当番の日はセル全体を少し青みがかったハイライトに */
+        .calendar-cell.my-duty { background-color: #eff6ff; border: 2px solid var(--primary); }
         .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; }
         .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
         .practice-dot { display: inline-block; color: #64748b; font-size: 1.3rem; font-weight: bold; line-height: 1; }
-        .practice-dot.my-dot { color: #e11d48; } /* 🌟 自分の当番の日の●は赤色（またはお好みの色）に強調 */
+        .practice-dot.my-dot { color: #e11d48; }
         button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
         button.btn:hover { background-color: #1d4ed8; }
         button.btn-danger { background-color: #ef4444; }
@@ -43,9 +43,37 @@
         .modal-tab-content { display: none; }
         .modal-tab-content.active { display: block; }
         #sync-status { font-size: 0.75rem; color: #93c5fd; margin-left: 0.5rem; }
+
+        /* 🔐 合言葉認証モーダル用のスタイル */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85); display: flex;
+            justify-content: center; align-items: center; z-index: 99999;
+        }
+        .auth-card {
+            background: white; padding: 2rem; border-radius: 12px;
+            width: 90%; max-width: 360px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .auth-card h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; }
+        .auth-card p { font-size: 0.9rem; color: #64748b; margin-bottom: 1.5rem; }
+        .auth-card input { width: 100%; padding: 0.75rem; font-size: 1.2rem; text-align: center; letter-spacing: 0.2rem; margin-bottom: 1rem; box-sizing: border-box; }
+        .auth-card button { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: bold; }
+        .auth-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
     </style>
 </head>
 <body>
+
+<!-- 🔐 合言葉認証画面 -->
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2>🏀 バスケチームアプリ</h2>
+        <p>利用するための「合言葉」を入力してください</p>
+        <input type="password" id="auth-pass" placeholder="合言葉を入力" onkeydown="if(event.key==='Enter') checkPassword()">
+        <button class="btn" onclick="checkPassword()">認証する</button>
+        <div id="auth-error" class="auth-error">合言葉が違います</div>
+    </div>
+</div>
 
 <header>
     <h1>🏀 バスケチーム出欠 <span id="sync-status"></span></h1>
@@ -71,7 +99,7 @@
             <button class="btn" onclick="changeMonth(1)">次の月</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。（※自分の当番の日は日めくりが赤字の●＆青枠になります）</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
     </div>
 
     <!-- 当番一覧画面 -->
@@ -132,7 +160,28 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
-    window.addEventListener('DOMContentLoaded', () => { loadDataFromCloud(); });
+    const CORRECT_PASS = "8745"; // 🔐 設定された合言葉
+
+    window.addEventListener('DOMContentLoaded', () => {
+        // すでに合言葉認証済みの場合は画面を表示
+        if (localStorage.getItem('isAuth') === 'true') {
+            document.getElementById('auth-overlay').style.display = 'none';
+            loadDataFromCloud();
+        }
+    });
+
+    function checkPassword() {
+        const inputVal = document.getElementById('auth-pass').value.trim();
+        const errorEl = document.getElementById('auth-error');
+        if (inputVal === CORRECT_PASS) {
+            localStorage.setItem('isAuth', 'true');
+            document.getElementById('auth-overlay').style.display = 'none';
+            loadDataFromCloud();
+        } else {
+            errorEl.style.display = 'block';
+            document.getElementById('auth-pass').value = '';
+        }
+    }
 
     let currentYear = 2026;
     let currentMonth = 9; // 10月
@@ -233,8 +282,7 @@
                 renderCalendar();
             });
     }
-
-    function saveDataToCloud() {
+function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
@@ -311,7 +359,7 @@
         if(select) {
             myFamilyId = Number(select.value);
             localStorage.setItem('myFamilyId', myFamilyId);
-            renderCalendar(); // 家族を変えたら即座にカレンダーのハイライトも切り替える
+            renderCalendar();
         }
     }
 
@@ -369,7 +417,6 @@
             grid.appendChild(document.createElement('div'));
         }
 
-        // 現在選択されている「わが家」の名称を取得（例: "きはる家"）
         let myFamilyObj = masterData.find(item => Number(item.id) === Number(myFamilyId));
         let myFamilyName = (myFamilyObj && myFamilyObj.children && myFamilyObj.children[0]) ? myFamilyObj.children[0] + "家" : "";
 
@@ -385,7 +432,6 @@
                 cell.classList.add('practice');
                 let assignedDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
                 
-                // 🌟 もし自分の世帯が当番の日なら、クラスを追加して色をガラリと変える
                 let isMyDuty = (myFamilyName && assignedDuty === myFamilyName);
                 if (isMyDuty) {
                     cell.classList.add('my-duty');
@@ -455,9 +501,10 @@
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         saveDataToCloud();
-        renderCalendar(); // カレンダーの表示も即時反映
+        renderCalendar();
     }
-function openDayModal(dateStr) {
+
+    function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
@@ -530,8 +577,7 @@ function openDayModal(dateStr) {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-
-    function switchModalTab(tabName, event) {
+function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -637,7 +683,7 @@ function openDayModal(dateStr) {
     }
 
     function resetMasterForm() {
-        document.getElementById('edit-id').value = '0';
+        document.getElementById('edit-id').value = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
@@ -679,8 +725,6 @@ function openDayModal(dateStr) {
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
         allChildren.forEach(name => {
-            let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) => attendanceData[selectedDate][name] || '参加';
-            // fix simple syntax
             let actualStatus = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
             if (actualStatus === '参加') counts.参加++;
             else if (actualStatus === '遅刻') counts.遅刻++;
@@ -689,7 +733,6 @@ function openDayModal(dateStr) {
 
         summaryBox.innerHTML = `<span style="color:#16a34a;">参加: ${counts.参加}人</span> <span style="color:#ca8a04;">遅刻: ${counts.遅刻}人</span> <span style="color:#dc2626;">欠席: ${counts.欠席}人</span>`;
         let html = `<table><thead><tr><th>名前</th><th>出欠状況</th></tr></thead><tbody>`;
-        allChildren.label = ''; // dummy
         allChildren.forEach(name => {
             let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
             let style = status.includes('欠席') ? 'color:#dc2626; font-weight:bold;' : (status === '遅刻' ? 'color:#ca8a04; font-weight:bold;' : 'color:#16a34a; font-weight:bold;');
