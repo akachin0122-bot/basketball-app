@@ -133,6 +133,13 @@
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
+        
+        // カレンダーの日付ズレ（時差による1日前へのズレ）を防ぐ完全な文字列抽出
+        let match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            return `${match[1]}-${match[2]}-${match[3]}`;
+        }
+        
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
             let y = d.getFullYear();
@@ -140,7 +147,7 @@
             let day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
         }
-        return (/^\d{4}-\d{2}-\d{2}$/.test(str)) ? str : '';
+        return '';
     }
 
     function parseMasterData(rawMaster) {
@@ -149,11 +156,24 @@
         rawMaster.forEach(item => {
             let id = item.id ? Number(item.id) : (parsed.length + 1);
             let kids = [];
+            
+            // children が配列の場合、カンマ区切りの文字列の場合、あるいは個別のプロパティ（child1, child2...）の場合をすべて網羅
             if (Array.isArray(item.children)) {
                 kids = item.children.filter(c => c && String(c).trim() !== "");
             } else if (typeof item.children === 'string' && item.children.trim() !== "") {
                 kids = item.children.split(',').map(s => s.trim()).filter(s => s !== "");
             }
+            
+            // もし個別プロパティがあればそれも追加
+            ['child1', 'child2', 'child3', 'c1', 'c2', 'c3'].forEach(k => {
+                if (item[k] && String(item[k]).trim() !== "") {
+                    kids.push(String(item[k]).trim());
+                }
+            });
+
+            // 重複除去
+            kids = [...new Set(kids)];
+
             if (kids.length > 0) {
                 parsed.push({ id: id, children: kids });
             }
@@ -215,6 +235,7 @@
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
+        
         let practicesArr = [];
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
@@ -224,6 +245,7 @@
                 practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo, duty: assignedDuty });
             }
         });
+
         let attendanceArr = [];
         Object.keys(attendanceData).forEach(date => {
             let cleanDateStrVal = cleanDateStr(date);
@@ -234,9 +256,16 @@
                 });
             }
         });
+
+        // 兄弟（複数名の子ども）のデータが確実に保存されるようフォーマットを統一
+        let masterArr = masterData.map(m => ({
+            id: m.id,
+            children: m.children
+        }));
+
         fetch(GAS_URL, {
             method: 'POST',
-            body: "action=saveData&data=" + encodeURIComponent(JSON.stringify({ practices: practicesArr, attendance: attendanceArr, master: masterData })),
+            body: "action=saveData&data=" + encodeURIComponent(JSON.stringify({ practices: practicesArr, attendance: attendanceArr, master: masterArr })),
             headers: { "Content-Type": "application/x-www-form-urlencoded" }
         })
         .then(res => res.json())
