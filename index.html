@@ -27,6 +27,9 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
         .view-section { display: none; background: #0f172a !important; color: #f8fafc !important; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 1px solid var(--border); }
         .view-section.active { display: block; }
 .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #334155; color: #f8fafc; font-size: 0.85rem; border-radius: 4px; }
+        /* 🌟 今日日付の枠線スタイル */
+.calendar-cell.today-cell { border: 2px dashed #facc15 !important; } /* 黄色の点線枠 */
+
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: nowrap; gap: 0.5rem; }
         /* 変更後：背景を暗く、文字を白くする */
@@ -197,10 +200,11 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
         }
     }
 
-    let currentYear = 2026;
-    let currentMonth = 9; // 10月
-    let dutyYear = 2026;
-    let dutyMonth = 9;
+        const _today = new Date();
+    let currentYear = _today.getFullYear();
+    let currentMonth = _today.getMonth(); // 今月の月（0〜11）
+    let dutyYear = _today.getFullYear();
+    let dutyMonth = _today.getMonth();
 
     let masterData = [
         { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
@@ -444,6 +448,13 @@ function saveDataToCloud() {
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            // 🌟 ここに今日判定のコードを追加
+            const _t = new Date();
+            const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
+            if (dateStr === todayStr) {
+                cell.classList.add('today-cell');
+            }
+            let html = `<div class="date-num">${day}</div>`;
             let html = `<div class="date-num">${day}</div>`;
             
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
