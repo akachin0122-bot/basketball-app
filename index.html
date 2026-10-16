@@ -133,7 +133,6 @@
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
-        // タイムゾーンによる日付ズレを防ぐため、Dateオブジェクト経由で正確なYYYY-MM-DDを生成
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
             let y = d.getFullYear();
@@ -144,6 +143,26 @@
         return (/^\d{4}-\d{2}-\d{2}$/.test(str)) ? str : '';
     }
 
+    function parseMasterData(rawMaster) {
+        if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
+        let parsed = [];
+        rawMaster.forEach(item => {
+            let id = item.id ? Number(item.id) : (parsed.length + 1);
+            let kids = [];
+            if (Array.isArray(item.children)) {
+                kids = item.children.filter(c => c && String(c).trim() !== "");
+            } else if (typeof item.children === 'string' && item.children.trim() !== "") {
+                kids = item.children.split(',').map(s => s.trim()).filter(s => s !== "");
+            }
+            if (kids.length > 0) {
+                parsed.push({ id: id, children: kids });
+            }
+        });
+        if (parsed.length > 0) {
+            masterData = parsed;
+        }
+    }
+
     function loadDataFromCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（同期中...）";
@@ -151,7 +170,9 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    if (data.master && data.master.length > 0) masterData = data.master;
+                    if (data.master && data.master.length > 0) {
+                        parseMasterData(data.master);
+                    }
                     if (data.practices && data.practices.length > 0) {
                         practiceData = {};
                         data.practices.forEach(p => {
@@ -205,11 +226,11 @@
         });
         let attendanceArr = [];
         Object.keys(attendanceData).forEach(date => {
-            let cleanDate = cleanDateStr(date);
-            if (cleanDate) {
+            let cleanDateStrVal = cleanDateStr(date);
+            if (cleanDateStrVal) {
                 let kids = attendanceData[date];
                 Object.keys(kids).forEach(childName => {
-                    attendanceArr.push({ date: cleanDate, childName: childName, status: kids[childName] });
+                    attendanceArr.push({ date: cleanDateStrVal, childName: childName, status: kids[childName] });
                 });
             }
         });
@@ -244,6 +265,10 @@
             if (Number(item.id) === Number(myFamilyId)) opt.selected = true;
             select.appendChild(opt);
         });
+        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) && masterData.length > 0) {
+            myFamilyId = masterData[0].id;
+            select.value = myFamilyId;
+        }
     }
 
     function changeMyFamily(id) {
