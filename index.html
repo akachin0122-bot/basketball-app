@@ -135,7 +135,7 @@
             <h2 id="duty-month-title" style="margin:0; font-size: 1rem; white-space: nowrap; color: #f8fafc;">当番スケジュール一覧</h2>
             <button class="btn" onclick="changeDutyMonth(1)">次の月</button>
         </div>
-        <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。用事などで代わる場合は、ここから直接担当を変更できます。</p>
+        <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。担当を設定・変更する場合はここから選んでください。</p>
         <div id="duty-list-container"></div>
     </div>
 
@@ -161,7 +161,7 @@
             </div>
             <div style="margin-bottom: 0.75rem;">
                 <label style="cursor:pointer; font-size: 0.9rem; color: #f87171; font-weight: bold;">
-                    <input type="checkbox" id="skip-duty" style="transform: scale(1.1); margin-right: 4px;"> この世帯は当番を免除する（自動割り当てから外す）
+                    <input type="checkbox" id="skip-duty" style="transform: scale(1.1); margin-right: 4px;"> この世帯は当番を免除する（手動選択でも対象外にする場合など）
                 </label>
             </div>
             <button class="btn" id="save-btn" onclick="saveMasterItem()">追加する</button>
@@ -213,7 +213,6 @@
         }
     }
 
-// 🌟 自動で今日の年月日を取得
     const _todayInit = new Date();
     let currentYear = _todayInit.getFullYear();
     let currentMonth = _todayInit.getMonth(); 
@@ -240,8 +239,7 @@
         }
         return str;
     }
-
-    function parseMasterData(rawMaster) {
+function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -325,7 +323,7 @@
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
-                let assignedDuty = manualDutyData[cleanDate] || p.duty || "";
+                let assignedDuty = manualDutyData[date] || p.duty || "";
                 practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo, duty: assignedDuty });
             }
         });
@@ -396,35 +394,27 @@
             renderCalendar();
         }
     }
-
+ // 🌟 自動割り当てを廃止し、手動で登録された当番のみを返す（初期はすべて未設定）
     function getDutyMapForYearMonth(y, m) {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
             return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
         }).sort();
 
-        let activeFamilies = masterData.filter(item => !item.skipDuty && item.children && item.children[0]);
-
-        let dutyCounter = 0;
         let dutyMap = {};
         practiceDates.forEach(d => {
             if (manualDutyData[d]) {
                 dutyMap[d] = manualDutyData[d];
             } else if (practiceData[d] && practiceData[d].duty) {
                 dutyMap[d] = practiceData[d].duty;
-            } else if (activeFamilies.length > 0) {
-                let assignedFamily = activeFamilies[dutyCounter % activeFamilies.length];
-                if (assignedFamily && assignedFamily.children && assignedFamily.children[0]) {
-                    dutyMap[d] = assignedFamily.children[0] + "家";
-                }
-                dutyCounter++;
             } else {
-                dutyMap[d] = "未設定";
+                dutyMap[d] = ""; // 初期状態は未設定（空欄）
             }
         });
         return dutyMap;
     }
-function switchView(viewName, event) {
+
+    function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
@@ -462,7 +452,6 @@ function switchView(viewName, event) {
             cell.className = 'calendar-cell';
             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
-            // 🌟 今日なら黄色の点線枠をつける
             const _t = new Date();
             const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
             if (dateStr === todayStr) {
@@ -525,6 +514,7 @@ function switchView(viewName, event) {
             let currentDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
             
             let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
+            selectHtml += `<option value="">（未設定）</option>`;
             masterData.forEach(family => {
                 if (!family.children || !family.children[0]) return;
                 let familyName = family.children[0] + "家";
@@ -556,7 +546,7 @@ function switchView(viewName, event) {
 
         const contentDiv = document.getElementById('modal-content');
 
-        let dutyOptions = '';
+        let dutyOptions = '<option value="">（未設定）</option>';
         masterData.forEach(family => {
             if (!family.children || !family.children[0]) return;
             let familyName = family.children[0] + "家";
@@ -600,7 +590,6 @@ function switchView(viewName, event) {
                 <div style="margin-bottom: 0.75rem;">
                     <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
                     <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
-                        <option value="">（自動割り当て通り）</option>
                         ${dutyOptions}
                     </select>
                 </div>
@@ -681,13 +670,13 @@ function switchView(viewName, event) {
         if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
         attendanceData[dateStr][childName] = status;
         saveDataToCloud();
-                                     }
-    function renderMasterTable() {
+    }
+function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
         masterData.forEach((item, index) => {
-            let skipLabel = item.skipDuty ? '<span style="color:#f87171; font-weight:bold;">当番免除</span>' : '<span style="color:#4ade80;">当番あり</span>';
+            let skipLabel = item.skipDuty ? '<span style="color:#f87171; font-weight:bold;">免除</span>' : '<span style="color:#4ade80;">有効</span>';
             tbody.innerHTML += `<tr>
                 <td>${index + 1}</td>
                 <td>${item.children.join('、 ')}</td>
