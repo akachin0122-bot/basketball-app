@@ -766,7 +766,8 @@ function switchModalTab(tabName, event) {
             return;
         }
 
-        const todayStr = new Date().toISOString().split('T')[0];
+                const _t = new Date();
+        const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
         let targetDate = practiceDates[0];
         let futureDates = practiceDates.filter(d => d >= todayStr);
         if (futureDates.length > 0) {
