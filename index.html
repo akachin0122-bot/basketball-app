@@ -22,10 +22,11 @@
         .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #f1f5f9; font-size: 0.85rem; }
         .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: #fff; text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; }
         .calendar-cell.practice { background-color: #f8fafc; }
+        .calendar-cell.my-duty { background-color: #eff6ff; border: 2px solid var(--primary); } /* 🌟 自分の当番の日はセル全体を少し青みがかったハイライトに */
         .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; }
         .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
-        .practice-dot { display: inline-block; color: var(--primary); font-size: 1.1rem; font-weight: bold; line-height: 1; }
-        .calendar-duty-tag { font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 1px 3px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+        .practice-dot { display: inline-block; color: #64748b; font-size: 1.3rem; font-weight: bold; line-height: 1; }
+        .practice-dot.my-dot { color: #e11d48; } /* 🌟 自分の当番の日の●は赤色（またはお好みの色）に強調 */
         button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
         button.btn:hover { background-color: #1d4ed8; }
         button.btn-danger { background-color: #ef4444; }
@@ -50,7 +51,7 @@
     <h1>🏀 バスケチーム出欠 <span id="sync-status"></span></h1>
     <div class="family-selector-box">
         <span>👤 わが家:</span>
-        <select id="global-my-family" onchange="changeMyFamily(this.value)"></select>
+        <select id="global-my-family" onchange="changeMyFamily()"></select>
     </div>
 </header>
 
@@ -70,7 +71,7 @@
             <button class="btn" onclick="changeMonth(1)">次の月</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。（※自分の当番の日は日めくりが赤字の●＆青枠になります）</p>
     </div>
 
     <!-- 当番一覧画面 -->
@@ -232,8 +233,7 @@
                 renderCalendar();
             });
     }
-
-    function saveDataToCloud() {
+function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
@@ -305,12 +305,15 @@
         }
     }
 
-    function changeMyFamily(id) {
-        myFamilyId = Number(id);
-        localStorage.setItem('myFamilyId', myFamilyId);
+    function changeMyFamily() {
+        const select = document.getElementById('global-my-family');
+        if(select) {
+            myFamilyId = Number(select.value);
+            localStorage.setItem('myFamilyId', myFamilyId);
+            renderCalendar(); // 家族を変えたら即座にカレンダーのハイライトも切り替える
+        }
     }
 
-    // 自動ローテーション計算＋個別手動変更(manualDutyData)をマージした当番マップを生成
     function getDutyMapForYearMonth(y, m) {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
@@ -336,7 +339,8 @@
         });
         return dutyMap;
     }
-function switchView(viewName, event) {
+
+    function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
@@ -364,6 +368,10 @@ function switchView(viewName, event) {
             grid.appendChild(document.createElement('div'));
         }
 
+        // 現在選択されている「わが家」の名称を取得（例: "きはる家"）
+        let myFamilyObj = masterData.find(item => Number(item.id) === Number(myFamilyId));
+        let myFamilyName = (myFamilyObj && myFamilyObj.children && myFamilyObj.children[0]) ? myFamilyObj.children[0] + "家" : "";
+
         let dutyMap = getDutyMapForYearMonth(currentYear, currentMonth);
 
         for (let day = 1; day <= totalDays; day++) {
@@ -374,10 +382,15 @@ function switchView(viewName, event) {
             
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
                 cell.classList.add('practice');
-                html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
-                let dutyName = manualDutyData[dateStr] || dutyMap[dateStr] || "";
-                if (dutyName) {
-                    html += `<div class="calendar-duty-tag">当番:${dutyName}</div>`;
+                let assignedDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
+                
+                // 🌟 もし自分の世帯が当番の日なら、クラスを追加して色をガラリと変える
+                let isMyDuty = (myFamilyName && assignedDuty === myFamilyName);
+                if (isMyDuty) {
+                    cell.classList.add('my-duty');
+                    html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
+                } else {
+                    html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
                 }
             }
             cell.innerHTML = html;
@@ -400,7 +413,6 @@ function switchView(viewName, event) {
         renderDutyList();
     }
 
-    // 当番一覧画面のレンダリング
     function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
@@ -416,13 +428,6 @@ function switchView(viewName, event) {
         }
 
         let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
-
-        let familyOptions = '';
-        masterData.forEach(family => {
-            if (!family.children || !family.children[0]) return;
-            let familyName = family.children[0] + "家";
-            familyOptions += `<option value="${familyName}">${familyName}</option>`;
-        });
 
         let html = `<table><thead><tr><th>練習日</th><th>時間</th><th>担当当番</th></tr></thead><tbody>`;
         practiceDates.forEach(dateStr => {
@@ -449,6 +454,7 @@ function switchView(viewName, event) {
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         saveDataToCloud();
+        renderCalendar(); // カレンダーの表示も即時反映
     }
 
     function openDayModal(dateStr) {
@@ -524,8 +530,7 @@ function switchView(viewName, event) {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-
-    function switchModalTab(tabName, event) {
+function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -631,7 +636,7 @@ function switchView(viewName, event) {
     }
 
     function resetMasterForm() {
-        document.getElementById('edit-id').value = '';
+        document.getElementById('edit-id').value = '0';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
@@ -673,14 +678,17 @@ function switchView(viewName, event) {
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
         allChildren.forEach(name => {
-            let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
-            if (status === '参加') counts.参加++;
-            else if (status === '遅刻') counts.遅刻++;
-            else if (status.includes('欠席')) counts.欠席++;
+            let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) => attendanceData[selectedDate][name] || '参加';
+            // fix simple syntax
+            let actualStatus = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
+            if (actualStatus === '参加') counts.参加++;
+            else if (actualStatus === '遅刻') counts.遅刻++;
+            else if (actualStatus.includes('欠席')) counts.欠席++;
         });
 
         summaryBox.innerHTML = `<span style="color:#16a34a;">参加: ${counts.参加}人</span> <span style="color:#ca8a04;">遅刻: ${counts.遅刻}人</span> <span style="color:#dc2626;">欠席: ${counts.欠席}人</span>`;
         let html = `<table><thead><tr><th>名前</th><th>出欠状況</th></tr></thead><tbody>`;
+        allChildren.label = ''; // dummy
         allChildren.forEach(name => {
             let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
             let style = status.includes('欠席') ? 'color:#dc2626; font-weight:bold;' : (status === '遅刻' ? 'color:#ca8a04; font-weight:bold;' : 'color:#16a34a; font-weight:bold;');
