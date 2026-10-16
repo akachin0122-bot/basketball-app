@@ -11,8 +11,8 @@
         header h1 { font-size: 1.25rem; margin: 0; }
         .family-selector-box { background: rgba(255,255,255,0.15); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; }
         .family-selector-box select { background: white; color: var(--text); font-weight: bold; padding: 0.2rem; border-radius: 4px; border: 1px solid var(--border); }
-        nav { display: flex; justify-content: center; background: #ffffff; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        nav button { background: none; border: none; padding: 1rem 1.5rem; font-size: 1rem; font-weight: bold; cursor: pointer; color: #64748b; border-bottom: 3px solid transparent; }
+        nav { display: flex; justify-content: center; background: #ffffff; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
+        nav button { background: none; border: none; padding: 1rem 1.2rem; font-size: 0.95rem; font-weight: bold; cursor: pointer; color: #64748b; border-bottom: 3px solid transparent; white-space: nowrap; }
         nav button.active { color: var(--primary); border-bottom-color: var(--primary); }
         .container { max-width: 800px; margin: 1.5rem auto; padding: 0 1rem; }
         .view-section { display: none; background: var(--card); padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -56,11 +56,13 @@
 
 <nav>
     <button class="active" onclick="switchView('calendar', event)">カレンダー</button>
+    <button onclick="switchView('duty', event)">当番一覧</button>
     <button onclick="switchView('attendance', event)">出欠一覧</button>
     <button onclick="switchView('master', event)">当番マスタ</button>
 </nav>
 
 <div class="container">
+    <!-- カレンダー画面 -->
     <div id="view-calendar" class="view-section active">
         <div class="calendar-header">
             <button class="btn" onclick="changeMonth(-1)">前の月</button>
@@ -71,6 +73,18 @@
         <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
     </div>
 
+    <!-- 当番一覧画面 -->
+    <div id="view-duty" class="view-section">
+        <div class="calendar-header">
+            <button class="btn" onclick="changeDutyMonth(-1)">前の月</button>
+            <h2 id="duty-month-title" style="margin:0; font-size: 1.1rem;">当番スケジュール一覧</h2>
+            <button class="btn" onclick="changeDutyMonth(1)">次の月</button>
+        </div>
+        <p style="font-size: 0.85rem; color: #64748b;">今月の当番割り当て一覧です。用事などで代わる場合は、ここから直接担当を変更できます。</p>
+        <div id="duty-list-container"></div>
+    </div>
+
+    <!-- 出欠一覧画面 -->
     <div id="view-attendance" class="view-section">
         <h2>出欠確認一覧</h2>
         <label>練習日選択: </label>
@@ -79,6 +93,7 @@
         <div id="attendance-list-container"></div>
     </div>
 
+    <!-- 当番マスタ画面 -->
     <div id="view-master" class="view-section">
         <h2>当番順番マスタ設定</h2>
         <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
@@ -99,6 +114,7 @@
     </div>
 </div>
 
+<!-- 詳細モーダル -->
 <div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;">
     <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
         <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
@@ -119,6 +135,9 @@
 
     let currentYear = 2026;
     let currentMonth = 9; // 10月
+    let dutyYear = 2026;
+    let dutyMonth = 9;
+
     let masterData = [
         { id: 1, children: ["きはる", "えりみ"] },
         { id: 2, children: ["えな", "ほの"] },
@@ -140,15 +159,12 @@
         return str;
     }
 
-    // 兄弟データを確実にパースして保持する関数
     function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
             let id = item.id ? Number(item.id) : (parsed.length + 1);
             let kids = [];
-            
-            // 配列や文字列、あるいは個別プロパティ(child1, child2...)から確実に回収
             if (Array.isArray(item.children)) {
                 kids = item.children.filter(c => c && String(c).trim() !== "");
             }
@@ -157,7 +173,6 @@
                     kids.push(String(item[k]).trim());
                 }
             });
-
             kids = [...new Set(kids)];
             if (kids.length > 0) {
                 parsed.push({ id: id, children: kids });
@@ -180,6 +195,7 @@
                     }
                     if (data.practices && data.practices.length > 0) {
                         practiceData = {};
+                        manualDutyData = {};
                         data.practices.forEach(p => {
                             let cleanDate = cleanDateStr(p.date);
                             let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
@@ -242,7 +258,6 @@
             }
         });
 
-        // 🌟 ここがポイント：子どもの名前を個別の列(child1, child2, child3)に分解してGASに送信する
         let masterArr = masterData.map(m => {
             let obj = { id: m.id };
             if (m.children && m.children.length > 0) {
@@ -295,10 +310,11 @@
         localStorage.setItem('myFamilyId', myFamilyId);
     }
 
-    function getDutyMap() {
+    // 自動ローテーション計算＋個別手動変更(manualDutyData)をマージした当番マップを生成
+    function getDutyMapForYearMonth(y, m) {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
-            return cleanD && cleanD.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+            return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
         }).sort();
 
         let dutyCounter = 0;
@@ -320,14 +336,14 @@
         });
         return dutyMap;
     }
-
 function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
         if (event && event.target) event.target.classList.add('active');
         updateGlobalFamilySelect();
-        if (viewName === 'attendance') updateAttendanceSelect();
+        if (viewName === 'duty') renderDutyList();
+        else if (viewName === 'attendance') updateAttendanceSelect();
         else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
     }
 
@@ -348,7 +364,7 @@ function switchView(viewName, event) {
             grid.appendChild(document.createElement('div'));
         }
 
-        let dutyMap = getDutyMap();
+        let dutyMap = getDutyMapForYearMonth(currentYear, currentMonth);
 
         for (let day = 1; day <= totalDays; day++) {
             const cell = document.createElement('div');
@@ -377,11 +393,69 @@ function switchView(viewName, event) {
         renderCalendar();
     }
 
+    function changeDutyMonth(direction) {
+        dutyMonth += direction;
+        if (dutyMonth > 11) { dutyMonth = 0; dutyYear++; }
+        else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
+        renderDutyList();
+    }
+
+    // 当番一覧画面のレンダリング
+    function renderDutyList() {
+        document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
+        const container = document.getElementById('duty-list-container');
+        
+        let practiceDates = Object.keys(practiceData).filter(d => {
+            let cleanD = cleanDateStr(d);
+            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+        }).sort();
+
+        if (practiceDates.length === 0) {
+            container.innerHTML = '<p style="margin-top:1rem; color:#64748b;">この月の練習日は設定されていません。（カレンダーから練習日を追加してください）</p>';
+            return;
+        }
+
+        let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
+
+        let familyOptions = '';
+        masterData.forEach(family => {
+            if (!family.children || !family.children[0]) return;
+            let familyName = family.children[0] + "家";
+            familyOptions += `<option value="${familyName}">${familyName}</option>`;
+        });
+
+        let html = `<table><thead><tr><th>練習日</th><th>時間</th><th>担当当番</th></tr></thead><tbody>`;
+        practiceDates.forEach(dateStr => {
+            let p = practiceData[dateStr];
+            let currentDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
+            
+            let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
+            masterData.forEach(family => {
+                if (!family.children || !family.children[0]) return;
+                let familyName = family.children[0] + "家";
+                let selected = (currentDuty === familyName) ? 'selected' : '';
+                selectHtml += `<option value="${familyName}" ${selected}>${familyName}</option>`;
+            });
+            selectHtml += `</select>`;
+
+            html += `<tr><td><strong>${dateStr}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    function updateDutyFromList(dateStr, newDuty) {
+        manualDutyData[dateStr] = newDuty;
+        if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
+        practiceData[dateStr].duty = newDuty;
+        saveDataToCloud();
+    }
+
     function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
-        let dutyMap = getDutyMap();
+        let dutyMap = getDutyMapForYearMonth(parseInt(dateStr.split('-')[0]), parseInt(dateStr.split('-')[1]) - 1);
         let currentDuty = manualDutyData[dateStr] || pData.duty || dutyMap[dateStr] || "";
 
         const contentDiv = document.getElementById('modal-content');
@@ -430,7 +504,7 @@ function switchView(viewName, event) {
                 <div style="margin-bottom: 0.75rem;">
                     <label><strong>当番担当:</strong></label><br>
                     <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
-                        <option value="">（自動割り当て）</option>
+                        <option value="">（自動割り当て通り）</option>
                         ${dutyOptions}
                     </select>
                 </div>
