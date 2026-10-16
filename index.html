@@ -724,20 +724,43 @@ function saveDataToCloud() {
         saveDataToCloud(); // 🌟 削除時もクラウドへ即時保存！
     }
 
-    function updateAttendanceSelect() {
+        function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
         if(!select) return;
         select.innerHTML = '';
         let practiceDates = Object.keys(practiceData).filter(d => cleanDateStr(d) && practiceData[d].isPractice).map(d => cleanDateStr(d)).sort();
         practiceDates = [...new Set(practiceDates)];
+
+        if (practiceDates.length === 0) {
+            renderAttendanceList();
+            return;
+        }
+
+        // 🌟 今日（YYYY-MM-DD形式）を取得
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // 🌟 今日以降で一番近い練習日、または過去も含めて一番近い練習日を探す
+        let targetDate = practiceDates[0];
+        let futureDates = practiceDates.filter(d => d >= todayStr);
+        if (futureDates.length > 0) {
+            targetDate = futureDates[0]; // 今日以降の最初の練習日
+        } else {
+            targetDate = practiceDates[practiceDates.length - 1]; // すべて過去の場合は一番直近の過去
+        }
+
         practiceDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d;
             opt.textContent = `${d} (${practiceData[d].startTime || '19:00'}-${practiceData[d].endTime || '21:00'})`;
+            // 🌟 今日または一番近い日を初期選択にする
+            if (d === targetDate) {
+                opt.selected = true;
+            }
             select.appendChild(opt);
         });
         renderAttendanceList();
     }
+
 
     function renderAttendanceList() {
         const select = document.getElementById('attendance-date-select');
