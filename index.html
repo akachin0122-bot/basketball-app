@@ -29,8 +29,7 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
 .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #334155; color: #f8fafc; font-size: 0.85rem; border-radius: 4px; }
         /* 🌟 今日日付の枠線スタイル */
 .calendar-cell.today-cell { border: 2px dashed #facc15 !important; } /* 黄色の点線枠 */
-
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: nowrap; gap: 0.5rem; }
         /* 変更後：背景を暗く、文字を白くする */
         .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: var(--cell-bg); text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 4px; color: var(--text); }
