@@ -179,11 +179,13 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
     const CORRECT_PASS = "8745";
 
-    window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-overlay').style.display = 'none';
             loadDataFromCloud();
         }
+    });
+
     });
 
     function checkPassword() {
