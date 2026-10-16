@@ -3,75 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HN🏀出欠・当番管理アプリ</title>
+    <title>バスケチーム出欠・当番管理アプリ</title>
     <style>
-        /* 変更後：おすすめ1のダークトーンに定義 */
-:root { 
-    --primary: #2563eb; 
-    --bg: #1e293b;        /* アプリ全体の背景（ダークブルーグレー） */
-    --card: #0f172a;      /* カレンダーカードの背景（濃いダークカラー） */
-    --cell-bg: #1e293b;   /* 日付マスの背景 */
-    --text: #f8fafc;      /* 文字色（白） */
-    --border: #334155;    /* 枠線（落ち着いたグレー） */
-}
+        :root { 
+            --primary: #2563eb; 
+            --bg: #1e293b;        
+            --card: #0f172a;      
+            --cell-bg: #1e293b;   
+            --text: #f8fafc;      
+            --border: #334155;    
+        }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        /* 🌟 上部バー（黒×緑） */
         header { background: #000000; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-header h1 { font-size: 1.25rem; margin: 0; color: #22c55e; }
+        header h1 { font-size: 1.25rem; margin: 0; color: #22c55e; }
+
         .family-selector-box { background: rgba(255,255,255,0.15); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; }
         .family-selector-box select { background: #1e293b; color: #ffffff; font-weight: bold; padding: 0.2rem; border-radius: 4px; border: 1px solid var(--border); }
-        /* 変更後：タブの背景もグレー（またはダークトーン）にする場合の一例 */
-nav { display: flex; justify-content: center; background: #334155; border-bottom: 1px solid #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
-nav button { background: none; border: none; padding: 1rem 1.2rem; font-size: 0.95rem; font-weight: bold; cursor: pointer; color: #94a3b8; border-bottom: 3px solid transparent; white-space: nowrap; }
-nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
+        
+        /* 🌟 ナビゲーションタブ */
+        nav { display: flex; justify-content: center; background: #0f172a; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.3); overflow-x: auto; }
+        nav button { background: none; border: none; padding: 1rem 1.2rem; font-size: 0.95rem; font-weight: bold; cursor: pointer; color: #94a3b8; border-bottom: 3px solid transparent; white-space: nowrap; }
+        nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
+        
         .container { max-width: 800px; margin: 1.5rem auto; padding: 0 1rem; }
-        .view-section { display: none; background: #0f172a !important; color: #f8fafc !important; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 1px solid var(--border); }
+        .view-section { display: none; background: var(--card); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 1px solid var(--border); }
         .view-section.active { display: block; }
-.calendar-day-header { font-weight: bold; padding: 0.5rem; background: #334155; color: #f8fafc; font-size: 0.85rem; border-radius: 4px; }
-        /* 🌟 今日日付の枠線スタイル */
-.calendar-cell.today-cell { border: 2px dashed #facc15 !important; } /* 黄色の点線枠 */
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: nowrap; gap: 0.5rem; }
-        /* 変更後：背景を暗く、文字を白くする */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        
+        /* 🌟 曜日のヘッダー */
+        .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #334155; color: #f8fafc; font-size: 0.85rem; border-radius: 4px; }
+        
+        /* 🌟 カレンダーセル・今日の日付枠 */
         .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: var(--cell-bg); text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 4px; color: var(--text); }
         .calendar-cell.practice { background-color: #1e293b; }
         .calendar-cell.my-duty { background-color: #1e3a8a; border: 2px solid #3b82f6; } 
+        .calendar-cell.today-cell { border: 2px dashed #facc15 !important; }
         .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; color: #f1f5f9; }
-    .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
-        .practice-dot { display: inline-block; color: #64748b; font-size: 1.3rem; font-weight: bold; line-height: 1; }
-        .practice-dot.my-dot { color: #e11d48; }
-        button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        
+        .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
+        .practice-dot { display: inline-block; color: #94a3b8; font-size: 1.3rem; font-weight: bold; line-height: 1; }
+        .practice-dot.my-dot { color: #f43f5e; } 
+        
+        button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button.btn:hover { background-color: #1d4ed8; }
         button.btn-danger { background-color: #ef4444; }
-        button.btn-secondary { background-color: #64748b; }
+        button.btn-secondary { background-color: #475569; }
         button.btn-warning { background-color: #d97706; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; font-size: 0.9rem; color: var(--text); }
         th { background: #334155 !important; color: #f8fafc !important; }
+        
         .summary-box { display: flex; gap: 1rem; background: #1e293b !important; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: bold; border: 1px solid var(--border); }
-        select, input, textarea { padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-size: 0.9rem; font-family: inherit; }
+        select, input, textarea { padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-size: 0.9rem; font-family: inherit; background: #1e293b; color: white; }
+        
         .modal-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
-        .modal-tab-btn { flex: 1; padding: 0.5rem; background: none; border: none; font-weight: bold; cursor: pointer; color: #64748b; text-align: center; }
-        .modal-tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -2px; }
+        .modal-tab-btn { flex: 1; padding: 0.5rem; background: none; border: none; font-weight: bold; cursor: pointer; color: #94a3b8; text-align: center; }
+        .modal-tab-btn.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; margin-bottom: -2px; }
         .modal-tab-content { display: none; }
         .modal-tab-content.active { display: block; }
         #sync-status { font-size: 0.75rem; color: #93c5fd; margin-left: 0.5rem; }
 
-        /* 🔐 合言葉認証モーダル用のスタイル */
+        /* 🔐 合言葉認証画面 */
         #auth-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.85); display: flex;
+            background: rgba(15, 23, 42, 0.95); display: flex;
             justify-content: center; align-items: center; z-index: 99999;
         }
         .auth-card {
-            background: white; padding: 2rem; border-radius: 12px;
+            background: #0f172a; padding: 2rem; border-radius: 12px;
             width: 90%; max-width: 360px; text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border);
         }
-        .auth-card h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; }
-        .auth-card p { font-size: 0.9rem; color: #64748b; margin-bottom: 1.5rem; }
-        .auth-card input { width: 100%; padding: 0.75rem; font-size: 1.2rem; text-align: center; letter-spacing: 0.2rem; margin-bottom: 1rem; box-sizing: border-box; }
+        .auth-card h2 { margin-top: 0; color: #22c55e; font-size: 1.4rem; }
+        .auth-card p { font-size: 0.9rem; color: #94a3b8; margin-bottom: 1.5rem; }
+        .auth-card input { width: 100%; padding: 0.75rem; font-size: 1.2rem; text-align: center; letter-spacing: 0.2rem; margin-bottom: 1rem; box-sizing: border-box; background: #1e293b; color: white; border: 1px solid var(--border); }
         .auth-card button { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: bold; }
         .auth-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+
+        #day-modal > div { background: #0f172a !important; color: white !important; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -107,28 +121,28 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
     <div id="view-calendar" class="view-section active">
         <div class="calendar-header">
             <button class="btn" onclick="changeMonth(-1)">前の月</button>
-            <h2 id="calendar-title" style="margin:0; font-size: 1.1rem;"></h2>
+            <h2 id="calendar-title" style="margin:0; font-size: 1rem; white-space: nowrap; color: #f8fafc;"></h2>
             <button class="btn" onclick="changeMonth(1)">次の月</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
     </div>
 
     <!-- 当番一覧画面 -->
     <div id="view-duty" class="view-section">
         <div class="calendar-header">
             <button class="btn" onclick="changeDutyMonth(-1)">前の月</button>
-            <h2 id="duty-month-title" style="margin:0; font-size: 1.1rem;">当番スケジュール一覧</h2>
+            <h2 id="duty-month-title" style="margin:0; font-size: 1rem; white-space: nowrap; color: #f8fafc;">当番スケジュール一覧</h2>
             <button class="btn" onclick="changeDutyMonth(1)">次の月</button>
         </div>
-        <p style="font-size: 0.85rem; color: #64748b;">今月の当番割り当て一覧です。用事などで代わる場合は、ここから直接担当を変更できます。</p>
+        <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。用事などで代わる場合は、ここから直接担当を変更できます。</p>
         <div id="duty-list-container"></div>
     </div>
 
     <!-- 出欠一覧画面 -->
     <div id="view-attendance" class="view-section">
-        <h2>出欠確認一覧</h2>
-        <label>練習日選択: </label>
+        <h2 style="color:#f8fafc;">出欠確認一覧</h2>
+        <label style="color:#94a3b8;">練習日選択: </label>
         <select id="attendance-date-select" onchange="renderAttendanceList()" style="padding: 0.4rem; margin-bottom: 1rem;"></select>
         <div id="attendance-summary" class="summary-box"></div>
         <div id="attendance-list-container"></div>
@@ -136,9 +150,9 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
 
     <!-- 当番マスタ画面 -->
     <div id="view-master" class="view-section">
-        <h2>当番順番マスタ設定</h2>
+        <h2 style="color:#f8fafc;">当番順番マスタ設定</h2>
         <div style="background: #0f172a !important; color: #f8fafc !important; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid var(--border);">
-            <h3 id="form-title" style="margin-top:0;">世帯の追加</h3>
+            <h3 id="form-title" style="margin-top:0; color:#f8fafc;">世帯の追加</h3>
             <input type="hidden" id="edit-id" value="">
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
                 <input type="text" id="child-1" placeholder="子1人目（上の子）" style="width: 130px;">
@@ -146,7 +160,7 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
                 <input type="text" id="child-3" placeholder="子3人目（任意）" style="width: 130px;">
             </div>
             <div style="margin-bottom: 0.75rem;">
-                <label style="cursor:pointer; font-size: 0.9rem; color: #dc2626; font-weight: bold;">
+                <label style="cursor:pointer; font-size: 0.9rem; color: #f87171; font-weight: bold;">
                     <input type="checkbox" id="skip-duty" style="transform: scale(1.1); margin-right: 4px;"> この世帯は当番を免除する（自動割り当てから外す）
                 </label>
             </div>
@@ -161,9 +175,9 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
 </div>
 
 <!-- 詳細モーダル -->
-<div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;">
-    <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
-        <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
+<div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:9999;">
+    <div style="padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
+        <h3 id="modal-date-title" style="margin-top:0; color:#f8fafc;">日付</h3>
         <div class="modal-tabs" id="modal-tabs-header">
             <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
             <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
@@ -179,13 +193,11 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
     const CORRECT_PASS = "8745";
 
-        window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-overlay').style.display = 'none';
             loadDataFromCloud();
         }
-    });
-
     });
 
     function checkPassword() {
@@ -201,11 +213,12 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
         }
     }
 
-        const _today = new Date();
-    let currentYear = _today.getFullYear();
-    let currentMonth = _today.getMonth(); // 今月の月（0〜11）
-    let dutyYear = _today.getFullYear();
-    let dutyMonth = _today.getMonth();
+// 🌟 自動で今日の年月日を取得
+    const _todayInit = new Date();
+    let currentYear = _todayInit.getFullYear();
+    let currentMonth = _todayInit.getMonth(); 
+    let dutyYear = _todayInit.getFullYear();
+    let dutyMonth = _todayInit.getMonth();
 
     let masterData = [
         { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
@@ -302,7 +315,8 @@ nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
                 renderCalendar();
             });
     }
-function saveDataToCloud() {
+
+    function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
@@ -389,7 +403,6 @@ function saveDataToCloud() {
             return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
         }).sort();
 
-        // 当番対象の世帯（skipDutyがtrueの世帯は自動割り当てから除外）
         let activeFamilies = masterData.filter(item => !item.skipDuty && item.children && item.children[0]);
 
         let dutyCounter = 0;
@@ -411,8 +424,7 @@ function saveDataToCloud() {
         });
         return dutyMap;
     }
-
-    function switchView(viewName, event) {
+function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
@@ -449,13 +461,14 @@ function saveDataToCloud() {
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            // 🌟 ここに今日判定のコードを追加
+            
+            // 🌟 今日なら黄色の点線枠をつける
             const _t = new Date();
             const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
             if (dateStr === todayStr) {
                 cell.classList.add('today-cell');
             }
-            let html = `<div class="date-num">${day}</div>`;
+
             let html = `<div class="date-num">${day}</div>`;
             
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
@@ -500,7 +513,7 @@ function saveDataToCloud() {
         }).sort();
 
         if (practiceDates.length === 0) {
-            container.innerHTML = '<p style="margin-top:1rem; color:#64748b;">この月の練習日は設定されていません。（カレンダーから練習日を追加してください）</p>';
+            container.innerHTML = '<p style="margin-top:1rem; color:#94a3b8;">この月の練習日は設定されていません。（カレンダーから練習日を追加してください）</p>';
             return;
         }
 
@@ -555,16 +568,16 @@ function saveDataToCloud() {
 
         let attendanceHtml = `
             <div class="modal-tab-content active" id="tab-attendance">
-                <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
+                <p style="font-size: 0.85rem; color: #94a3b8;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
         `;
         if (myFamily && myFamily.children) {
-            attendanceHtml += `<div style="background:#f8fafc; padding:0.75rem; border-radius:6px;">`;
+            attendanceHtml += `<div style="background:#1e293b; padding:0.75rem; border-radius:6px; border:1px solid var(--border);">`;
             myFamily.children.forEach(childName => {
                 if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
                 let currentStatus = attendanceData[dateStr][childName] || '参加';
                 attendanceHtml += `
                     <div style="margin-bottom: 0.75rem;">
-                        <strong>${childName}</strong><br>
+                        <strong style="color:white;">${childName}</strong><br>
                         <select onchange="saveAttendance('${dateStr}', '${childName}', this.value)" style="margin-top: 4px; width: 100%;">
                             <option value="参加" ${currentStatus === '参加' ? 'selected' : ''}>参加</option>
                             <option value="遅刻" ${currentStatus === '遅刻' ? 'selected' : ''}>遅刻</option>
@@ -581,23 +594,23 @@ function saveDataToCloud() {
         let isPracChecked = pData.isPractice ? 'checked' : '';
         let settingsHtml = `
             <div class="modal-tab-content" id="tab-settings">
-                <div style="margin-bottom: 0.75rem; background: #fef3c7; padding: 0.5rem; border-radius: 4px;">
+                <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white;">
                     <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>この日を練習日にする</strong></label>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <label><strong>当番担当:</strong></label><br>
+                    <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
                     <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
                         <option value="">（自動割り当て通り）</option>
                         ${dutyOptions}
                     </select>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <label><strong>練習時間:</strong></label><br>
+                    <label style="color:#94a3b8;"><strong>練習時間:</strong></label><br>
                     <input type="time" id="modal-start" value="${pData.startTime || '19:00'}" onchange="updatePracticeInfo('${dateStr}')"> 〜 
                     <input type="time" id="modal-end" value="${pData.endTime || '21:00'}" onchange="updatePracticeInfo('${dateStr}')">
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <label><strong>備考（お知らせなど）:</strong></label><br>
+                    <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label><br>
                     <textarea id="modal-memo" rows="3" oninput="updatePracticeInfo('${dateStr}')" style="width: 100%;">${pData.memo || ''}</textarea>
                 </div>
                 <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の練習を完全に消去</button>
@@ -606,7 +619,8 @@ function saveDataToCloud() {
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
-                    }
+    }
+
     function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
@@ -667,14 +681,13 @@ function saveDataToCloud() {
         if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
         attendanceData[dateStr][childName] = status;
         saveDataToCloud();
-    }
-
+                                     }
     function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
         masterData.forEach((item, index) => {
-            let skipLabel = item.skipDuty ? '<span style="color:#dc2626; font-weight:bold;">当番免除</span>' : '<span style="color:#16a34a;">当番あり</span>';
+            let skipLabel = item.skipDuty ? '<span style="color:#f87171; font-weight:bold;">当番免除</span>' : '<span style="color:#4ade80;">当番あり</span>';
             tbody.innerHTML += `<tr>
                 <td>${index + 1}</td>
                 <td>${item.children.join('、 ')}</td>
@@ -712,7 +725,7 @@ function saveDataToCloud() {
         resetMasterForm();
         renderMasterTable();
         updateGlobalFamilySelect();
-        saveDataToCloud(); // 🌟 マスタ変更時にもクラウドへ即時保存！
+        saveDataToCloud();
     }
 
     function editMasterItem(id) {
@@ -743,10 +756,10 @@ function saveDataToCloud() {
         masterData = masterData.filter(item => item.id != id);
         renderMasterTable();
         updateGlobalFamilySelect();
-        saveDataToCloud(); // 🌟 削除時もクラウドへ即時保存！
+        saveDataToCloud();
     }
 
-        function updateAttendanceSelect() {
+    function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
         if(!select) return;
         select.innerHTML = '';
@@ -758,23 +771,19 @@ function saveDataToCloud() {
             return;
         }
 
-        // 🌟 今日（YYYY-MM-DD形式）を取得
         const todayStr = new Date().toISOString().split('T')[0];
-
-        // 🌟 今日以降で一番近い練習日、または過去も含めて一番近い練習日を探す
         let targetDate = practiceDates[0];
         let futureDates = practiceDates.filter(d => d >= todayStr);
         if (futureDates.length > 0) {
-            targetDate = futureDates[0]; // 今日以降の最初の練習日
+            targetDate = futureDates[0];
         } else {
-            targetDate = practiceDates[practiceDates.length - 1]; // すべて過去の場合は一番直近の過去
+            targetDate = practiceDates[practiceDates.length - 1];
         }
 
         practiceDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d;
             opt.textContent = `${d} (${practiceData[d].startTime || '19:00'}-${practiceData[d].endTime || '21:00'})`;
-            // 🌟 今日または一番近い日を初期選択にする
             if (d === targetDate) {
                 opt.selected = true;
             }
@@ -782,7 +791,6 @@ function saveDataToCloud() {
         });
         renderAttendanceList();
     }
-
 
     function renderAttendanceList() {
         const select = document.getElementById('attendance-date-select');
@@ -801,11 +809,11 @@ function saveDataToCloud() {
             else if (actualStatus.includes('欠席')) counts.欠席++;
         });
 
-        summaryBox.innerHTML = `<span style="color:#16a34a;">参加: ${counts.参加}人</span> <span style="color:#ca8a04;">遅刻: ${counts.遅刻}人</span> <span style="color:#dc2626;">欠席: ${counts.欠席}人</span>`;
+        summaryBox.innerHTML = `<span style="color:#4ade80;">参加: ${counts.参加}人</span> <span style="color:#facc15;">遅刻: ${counts.遅刻}人</span> <span style="color:#f87171;">欠席: ${counts.欠席}人</span>`;
         let html = `<table><thead><tr><th>名前</th><th>出欠状況</th></tr></thead><tbody>`;
         allChildren.forEach(name => {
             let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
-            let style = status.includes('欠席') ? 'color:#dc2626; font-weight:bold;' : (status === '遅刻' ? 'color:#ca8a04; font-weight:bold;' : 'color:#16a34a; font-weight:bold;');
+            let style = status.includes('欠席') ? 'color:#f87171; font-weight:bold;' : (status === '遅刻' ? 'color:#facc15; font-weight:bold;' : 'color:#4ade80; font-weight:bold;');
             html += `<tr><td>${name}</td><td><span style="${style}">${status}</span></td></tr>`;
         });
         html += `</tbody></table>`;
