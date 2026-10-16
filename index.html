@@ -133,11 +133,16 @@
                 <input type="text" id="child-2" placeholder="子2人目（任意）" style="width: 130px;">
                 <input type="text" id="child-3" placeholder="子3人目（任意）" style="width: 130px;">
             </div>
+            <div style="margin-bottom: 0.75rem;">
+                <label style="cursor:pointer; font-size: 0.9rem; color: #dc2626; font-weight: bold;">
+                    <input type="checkbox" id="skip-duty" style="transform: scale(1.1); margin-right: 4px;"> この世帯は当番を免除する（自動割り当てから外す）
+                </label>
+            </div>
             <button class="btn" id="save-btn" onclick="saveMasterItem()">追加する</button>
             <button class="btn btn-secondary" id="cancel-btn" onclick="resetMasterForm()" style="display:none;">キャンセル</button>
         </div>
         <table id="master-table">
-            <thead><tr><th>順番</th><th>子どもたちの名前</th><th>操作</th></tr></thead>
+            <thead><tr><th>順番</th><th>子どもたちの名前</th><th>状態</th><th>操作</th></tr></thead>
             <tbody id="master-tbody"></tbody>
         </table>
     </div>
@@ -160,10 +165,9 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
-    const CORRECT_PASS = "8745"; // 🔐 設定された合言葉
+    const CORRECT_PASS = "8745";
 
     window.addEventListener('DOMContentLoaded', () => {
-        // すでに合言葉認証済みの場合は画面を表示
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-overlay').style.display = 'none';
             loadDataFromCloud();
@@ -189,11 +193,11 @@
     let dutyMonth = 9;
 
     let masterData = [
-        { id: 1, children: ["きはる", "えりみ"] },
-        { id: 2, children: ["えな", "ほの"] },
-        { id: 3, children: ["きほ"] },
-        { id: 4, children: ["りん"] },
-        { id: 5, children: ["かりん", "りりな"] }
+        { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
+        { id: 2, children: ["えな", "ほの"], skipDuty: false },
+        { id: 3, children: ["きほ"], skipDuty: false },
+        { id: 4, children: ["りん"], skipDuty: false },
+        { id: 5, children: ["かりん", "りりな"], skipDuty: false }
     ];
     let myFamilyId = localStorage.getItem('myFamilyId') ? Number(localStorage.getItem('myFamilyId')) : 1;
     let practiceData = {}, attendanceData = {}, manualDutyData = {};
@@ -224,8 +228,9 @@
                 }
             });
             kids = [...new Set(kids)];
+            let skip = (item.skipDuty === true || item.skipDuty === 'true' || item.skipDuty === 'TRUE');
             if (kids.length > 0) {
-                parsed.push({ id: id, children: kids });
+                parsed.push({ id: id, children: kids, skipDuty: skip });
             }
         });
         if (parsed.length > 0) {
@@ -308,7 +313,7 @@ function saveDataToCloud() {
         });
 
         let masterArr = masterData.map(m => {
-            let obj = { id: m.id };
+            let obj = { id: m.id, skipDuty: m.skipDuty };
             if (m.children && m.children.length > 0) {
                 for (let i = 0; i < m.children.length; i++) {
                     obj['child' + (i + 1)] = m.children[i];
@@ -369,6 +374,9 @@ function saveDataToCloud() {
             return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
         }).sort();
 
+        // 当番対象の世帯（skipDutyがtrueの世帯は自動割り当てから除外）
+        let activeFamilies = masterData.filter(item => !item.skipDuty && item.children && item.children[0]);
+
         let dutyCounter = 0;
         let dutyMap = {};
         practiceDates.forEach(d => {
@@ -376,8 +384,8 @@ function saveDataToCloud() {
                 dutyMap[d] = manualDutyData[d];
             } else if (practiceData[d] && practiceData[d].duty) {
                 dutyMap[d] = practiceData[d].duty;
-            } else if (masterData.length > 0) {
-                let assignedFamily = masterData[dutyCounter % masterData.length];
+            } else if (activeFamilies.length > 0) {
+                let assignedFamily = activeFamilies[dutyCounter % activeFamilies.length];
                 if (assignedFamily && assignedFamily.children && assignedFamily.children[0]) {
                     dutyMap[d] = assignedFamily.children[0] + "家";
                 }
@@ -576,8 +584,8 @@ function saveDataToCloud() {
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
-    }
-function switchModalTab(tabName, event) {
+                    }
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -644,7 +652,16 @@ function switchModalTab(tabName, event) {
         if(!tbody) return;
         tbody.innerHTML = '';
         masterData.forEach((item, index) => {
-            tbody.innerHTML += `<tr><td>${index + 1}</td><td>${item.children.join('、 ')}</td><td><button class="btn btn-warning" onclick="editMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-right: 4px;">編集</button> <button class="btn btn-danger" onclick="deleteMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">削除</button></td></tr>`;
+            let skipLabel = item.skipDuty ? '<span style="color:#dc2626; font-weight:bold;">当番免除</span>' : '<span style="color:#16a34a;">当番あり</span>';
+            tbody.innerHTML += `<tr>
+                <td>${index + 1}</td>
+                <td>${item.children.join('、 ')}</td>
+                <td>${skipLabel}</td>
+                <td>
+                    <button class="btn btn-warning" onclick="editMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-right: 4px;">編集</button>
+                    <button class="btn btn-danger" onclick="deleteMasterItem(${item.id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">削除</button>
+                </td>
+            </tr>`;
         });
     }
 
@@ -653,6 +670,8 @@ function switchModalTab(tabName, event) {
         const c1 = document.getElementById('child-1').value.trim();
         const c2 = document.getElementById('child-2').value.trim();
         const c3 = document.getElementById('child-3').value.trim();
+        const skipDuty = document.getElementById('skip-duty').checked;
+
         if (!c1) return alert('1人目は必須です');
         let childrenArr = [c1];
         if (c2) childrenArr.push(c2);
@@ -660,14 +679,18 @@ function switchModalTab(tabName, event) {
 
         if (editId) {
             let item = masterData.find(m => m.id == editId);
-            if (item) item.children = childrenArr;
+            if (item) {
+                item.children = childrenArr;
+                item.skipDuty = skipDuty;
+            }
         } else {
-            masterData.push({ id: masterData.length > 0 ? Math.max(...masterData.map(m => m.id)) + 1 : 1, children: childrenArr });
+            let newId = masterData.length > 0 ? Math.max(...masterData.map(m => m.id)) + 1 : 1;
+            masterData.push({ id: newId, children: childrenArr, skipDuty: skipDuty });
         }
         resetMasterForm();
         renderMasterTable();
         updateGlobalFamilySelect();
-        saveDataToCloud();
+        saveDataToCloud(); // 🌟 マスタ変更時にもクラウドへ即時保存！
     }
 
     function editMasterItem(id) {
@@ -677,6 +700,7 @@ function switchModalTab(tabName, event) {
         document.getElementById('child-1').value = item.children[0] || '';
         document.getElementById('child-2').value = item.children[1] || '';
         document.getElementById('child-3').value = item.children[2] || '';
+        document.getElementById('skip-duty').checked = !!item.skipDuty;
         document.getElementById('form-title').textContent = '世帯の編集';
         document.getElementById('save-btn').textContent = '保存する';
         document.getElementById('cancel-btn').style.display = 'inline-block';
@@ -687,6 +711,7 @@ function switchModalTab(tabName, event) {
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
+        document.getElementById('skip-duty').checked = false;
         document.getElementById('form-title').textContent = '世帯の追加';
         document.getElementById('save-btn').textContent = '追加する';
         document.getElementById('cancel-btn').style.display = 'none';
@@ -696,7 +721,7 @@ function switchModalTab(tabName, event) {
         masterData = masterData.filter(item => item.id != id);
         renderMasterTable();
         updateGlobalFamilySelect();
-        saveDataToCloud();
+        saveDataToCloud(); // 🌟 削除時もクラウドへ即時保存！
     }
 
     function updateAttendanceSelect() {
