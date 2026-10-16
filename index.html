@@ -48,7 +48,7 @@
 <body>
 
 <header>
-    <h1>🏀 バスケチーム出欠 🏀<span id="sync-status"></span></h1>
+    <h1>🏀 バスケチーム出欠 <span id="sync-status"></span></h1>
     <div class="family-selector-box">
         <span>👤 わが家:</span>
         <select id="global-my-family" onchange="changeMyFamily()"></select>
@@ -233,7 +233,8 @@
                 renderCalendar();
             });
     }
-function saveDataToCloud() {
+
+    function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
@@ -456,8 +457,7 @@ function saveDataToCloud() {
         saveDataToCloud();
         renderCalendar(); // カレンダーの表示も即時反映
     }
-
-    function openDayModal(dateStr) {
+function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
@@ -530,7 +530,8 @@ function saveDataToCloud() {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-function switchModalTab(tabName, event) {
+
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
