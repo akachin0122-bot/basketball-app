@@ -47,7 +47,7 @@
 <body>
 
 <header>
-    <h1>🏀 バスケチーム出欠🏀 <span id="sync-status"></span></h1>
+    <h1>🏀 バスケチーム出欠 <span id="sync-status"></span></h1>
     <div class="family-selector-box">
         <span>👤 わが家:</span>
         <select id="global-my-family" onchange="changeMyFamily(this.value)"></select>
@@ -133,14 +133,14 @@
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
-        
-        let match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        let match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (match) {
-            return `${match[1]}-${match[2]}-${match[3]}`;
+            return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
         }
         return str;
     }
 
+    // 兄弟データを確実にパースして保持する関数
     function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
@@ -148,18 +148,17 @@
             let id = item.id ? Number(item.id) : (parsed.length + 1);
             let kids = [];
             
+            // 配列や文字列、あるいは個別プロパティ(child1, child2...)から確実に回収
             if (Array.isArray(item.children)) {
                 kids = item.children.filter(c => c && String(c).trim() !== "");
-            } else if (typeof item.children === 'string' && item.children.trim() !== "") {
-                kids = item.children.split(',').map(s => s.trim()).filter(s => s !== "");
             }
-            
             ['child1', 'child2', 'child3', 'c1', 'c2', 'c3'].forEach(k => {
                 if (item[k] && String(item[k]).trim() !== "") {
                     kids.push(String(item[k]).trim());
                 }
             });
 
+            kids = [...new Set(kids)];
             if (kids.length > 0) {
                 parsed.push({ id: id, children: kids });
             }
@@ -243,10 +242,16 @@
             }
         });
 
-        let masterArr = masterData.map(m => ({
-            id: m.id,
-            children: m.children
-        }));
+        // 🌟 ここがポイント：子どもの名前を個別の列(child1, child2, child3)に分解してGASに送信する
+        let masterArr = masterData.map(m => {
+            let obj = { id: m.id };
+            if (m.children && m.children.length > 0) {
+                for (let i = 0; i < m.children.length; i++) {
+                    obj['child' + (i + 1)] = m.children[i];
+                }
+            }
+            return obj;
+        });
 
         fetch(GAS_URL, {
             method: 'POST',
@@ -316,7 +321,7 @@
         return dutyMap;
     }
 
-    function switchView(viewName, event) {
+function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
