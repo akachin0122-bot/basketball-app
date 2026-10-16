@@ -239,7 +239,7 @@
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
         <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">
-            💡 日付をタップすると出欠連絡や練習設定ができます。
+            💡 日付をタップすると、出欠連絡や練習時間の変更ができます。
         </p>
     </div>
 
@@ -349,8 +349,9 @@
                         practiceData = {};
                         data.practices.forEach(p => {
                             let cleanDate = cleanDateStr(p.date);
-                            if (cleanDate) {
-                                practiceData[cleanDate] = { isPractice: p.isPractice === true || p.isPractice === 'true', startTime: p.startTime, endTime: p.endTime, memo: p.memo };
+                            let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
+                            if (cleanDate && isPracVal) {
+                                practiceData[cleanDate] = { isPractice: true, startTime: p.startTime || "19:00", endTime: p.endTime || "21:00", memo: p.memo || "" };
                             }
                         });
                     }
@@ -358,7 +359,7 @@
                         attendanceData = {};
                         data.attendance.forEach(a => {
                             let cleanDate = cleanDateStr(a.date);
-                            if (cleanDate) {
+                            if (cleanDate && a.childName) {
                                 if (!attendanceData[cleanDate]) attendanceData[cleanDate] = {};
                                 attendanceData[cleanDate][a.childName] = a.status;
                             }
@@ -369,12 +370,14 @@
                         setTimeout(() => { statusEl.textContent = ""; }, 2000);
                     }
                 }
+                initDefaultPractices();
                 updateGlobalFamilySelect();
                 renderCalendar();
             })
             .catch(err => {
                 console.error(err);
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
+                initDefaultPractices();
                 updateGlobalFamilySelect();
                 renderCalendar();
             });
@@ -387,9 +390,9 @@
         let practicesArr = [];
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
-            if (cleanDate) {
+            if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
-                practicesArr.push({ date: cleanDate, isPractice: p.isPractice, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
+                practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo });
             }
         });
 
@@ -458,7 +461,7 @@
 
     function getAllChildren() {
         let list = [];
-        masterData.forEach(item => { list = list.concat(item.children); });
+        masterData.forEach(item => { if (item.children) { list = list.concat(item.children); } });
         return list;
     }
 
@@ -467,17 +470,18 @@
         if(!select) return;
         select.innerHTML = '';
         masterData.forEach(item => {
+            if (!item.children || item.children.length === 0) return;
             let familyName = item.children[0] + "家";
             const opt = document.createElement('option');
             opt.value = item.id;
             opt.textContent = familyName;
-            if (item.id === myFamilyId) {
+            if (Number(item.id) === Number(myFamilyId)) {
                 opt.selected = true;
             }
             select.appendChild(opt);
         });
 
-        if (!masterData.some(item => item.id === myFamilyId) && masterData.length > 0) {
+        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) && masterData.length > 0) {
             myFamilyId = masterData[0].id;
             select.value = myFamilyId;
         }
@@ -501,7 +505,9 @@
                 dutyMap[d] = manualDutyData[d];
             } else if (masterData.length > 0) {
                 let assignedFamily = masterData[dutyCounter % masterData.length];
-                dutyMap[d] = assignedFamily.children[0] + "家";
+                if (assignedFamily && assignedFamily.children && assignedFamily.children[0]) {
+                    dutyMap[d] = assignedFamily.children[0] + "家";
+                }
                 dutyCounter++;
             } else {
                 dutyMap[d] = "未設定";
@@ -509,8 +515,7 @@
         });
         return dutyMap;
     }
-
-    function switchView(viewName, event) {
+function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(`view-${viewName}`).classList.add('active');
@@ -592,18 +597,19 @@
             
             let dutyOptions = '';
             masterData.forEach(family => {
+                if (!family.children || !family.children[0]) return;
                 let familyName = family.children[0] + "家";
                 let selected = (currentDuty === familyName) ? 'selected' : '';
                 dutyOptions += `<option value="${familyName}" ${selected}>${familyName}</option>`;
             });
 
-            let myFamily = masterData.find(item => item.id === myFamilyId) || masterData[0];
+            let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
 
             let attendanceHtml = `
                 <div class="modal-tab-content active" id="tab-attendance">
-                    <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況です。</p>
+                    <p style="font-size: 0.85rem; color: #64748b;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況です。</p>
             `;
-            if (myFamily) {
+            if (myFamily && myFamily.children) {
                 attendanceHtml += `<div style="background:#f8fafc; padding:0.75rem; border-radius:6px;">`;
                 myFamily.children.forEach(childName => {
                     if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
@@ -682,7 +688,7 @@
     }
 
     function removePractice(dateStr) {
-        if (practiceData[dateStr]) { practiceData[dateStr].isPractice = false; }
+        if (practiceData[dateStr]) { delete practiceData[dateStr]; }
         saveDataToCloud();
         openDayModal(dateStr);
     }
@@ -739,12 +745,12 @@
         if (c3) childrenArr.push(c3);
 
         if (editId) {
-            let item = masterData.find(m => m.id == editId);
+            let item = masterData.find(m => Number(m.id) === Number(editId));
             if (item) {
                 item.children = childrenArr;
             }
         } else {
-            const newId = masterData.length > 0 ? masterData[masterData.length - 1].id + 1 : 1;
+            const newId = masterData.length > 0 ? Math.max(...masterData.map(m => m.id)) + 1 : 1;
             masterData.push({ id: newId, children: childrenArr });
         }
 
@@ -755,7 +761,7 @@
     }
 
     function editMasterItem(id) {
-        let item = masterData.find(m => m.id === id);
+        let item = masterData.find(m => Number(m.id) === Number(id));
         if (!item) return;
 
         document.getElementById('edit-id').value = item.id;
@@ -780,7 +786,7 @@
     }
 
     function deleteMasterItem(id) {
-        masterData = masterData.filter(item => item.id !== id);
+        masterData = masterData.filter(item => Number(item.id) !== Number(id));
         renderMasterTable();
         updateGlobalFamilySelect();
         saveDataToCloud();
@@ -828,7 +834,7 @@
 
         if (!selectedDate) {
             summaryBox.innerHTML = '';
-            container.innerHTML = '<p>練習日がありません。</p>';
+            container.innerHTML = '<p>練習日が登録されていません。カレンダーから練習日を追加してください。</p>';
             return;
         }
 
