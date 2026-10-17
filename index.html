@@ -185,10 +185,28 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
     const CORRECT_PASS = "8745";
 
+    // 🚀 キャッシュから瞬時に復元して即表示する
+    let masterData = JSON.parse(localStorage.getItem('cache_master')) || [
+        { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
+        { id: 2, children: ["えな", "ほの"], skipDuty: false },
+        { id: 3, children: ["きほ"], skipDuty: false },
+        { id: 4, children: ["りん"], skipDuty: false },
+        { id: 5, children: ["かりん", "りりな"], skipDuty: false }
+    ];
+    let practiceData = JSON.parse(localStorage.getItem('cache_practices')) || {};
+    let attendanceData = JSON.parse(localStorage.getItem('cache_attendance')) || {};
+    let manualDutyData = JSON.parse(localStorage.getItem('cache_manualDuty')) || {};
+
+    let myFamilyId = localStorage.getItem('myFamilyId') ? Number(localStorage.getItem('myFamilyId')) : 1;
+
     window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-overlay').style.display = 'none';
-            loadDataFromCloud();
+            // 💡 画面を即時描画して待ち時間をゼロにする
+            updateGlobalFamilySelect();
+            renderCalendar();
+            // 裏側でこっそり最新データを取得して更新
+            loadDataFromCloud(true);
         }
     });
 
@@ -198,7 +216,9 @@
         if (inputVal === CORRECT_PASS) {
             localStorage.setItem('isAuth', 'true');
             document.getElementById('auth-overlay').style.display = 'none';
-            loadDataFromCloud();
+            updateGlobalFamilySelect();
+            renderCalendar();
+            loadDataFromCloud(true);
         } else {
             errorEl.style.display = 'block';
             document.getElementById('auth-pass').value = '';
@@ -210,16 +230,6 @@
     let currentMonth = _todayInit.getMonth(); 
     let dutyYear = _todayInit.getFullYear();
     let dutyMonth = _todayInit.getMonth();
-
-    let masterData = [
-        { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
-        { id: 2, children: ["えな", "ほの"], skipDuty: false },
-        { id: 3, children: ["きほ"], skipDuty: false },
-        { id: 4, children: ["りん"], skipDuty: false },
-        { id: 5, children: ["かりん", "りりな"], skipDuty: false }
-    ];
-    let myFamilyId = localStorage.getItem('myFamilyId') ? Number(localStorage.getItem('myFamilyId')) : 1;
-    let practiceData = {}, attendanceData = {}, manualDutyData = {};
 
     function cleanDateStr(rawDate) {
         if (!rawDate) return '';
@@ -254,11 +264,14 @@
         });
         if (parsed.length > 0) {
             masterData = parsed;
+            localStorage.setItem('cache_master', JSON.stringify(masterData));
         }
     }
-function loadDataFromCloud() {
+
+    function loadDataFromCloud(isBackground = false) {
         const statusEl = document.getElementById('sync-status');
-        if(statusEl) statusEl.textContent = "（同期中...）";
+        if(statusEl && !isBackground) statusEl.textContent = "（同期中...）";
+        
         fetch(GAS_URL + "?action=getAllData")
             .then(res => res.json())
             .then(data => {
@@ -285,6 +298,8 @@ function loadDataFromCloud() {
                             if (p.duty) { manualDutyData[cleanDate] = p.duty; }
                         }
                     });
+                    localStorage.setItem('cache_practices', JSON.stringify(practiceData));
+                    localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
                 }
                 if (data.attendance && data.attendance.length > 0) {
                     attendanceData = {};
@@ -298,19 +313,20 @@ function loadDataFromCloud() {
                             };
                         }
                     });
+                    localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
                 }
-                if(statusEl) { statusEl.textContent = "（同期完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
+                if(statusEl) { 
+                    statusEl.textContent = "（同期完了）"; 
+                    setTimeout(() => { statusEl.textContent = ""; }, 1500); 
+                }
                 updateGlobalFamilySelect();
                 renderCalendar();
             })
             .catch(err => {
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
-                updateGlobalFamilySelect();
-                renderCalendar();
             });
     }
-
-    function sendToGAS(payload) {
+function sendToGAS(payload) {
         fetch(GAS_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -323,7 +339,6 @@ function loadDataFromCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
-        // 当番・練習データの保存
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
@@ -337,7 +352,12 @@ function loadDataFromCloud() {
             }
         });
 
-        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
+        // キャッシュも即時更新
+        localStorage.setItem('cache_practices', JSON.stringify(practiceData));
+        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
+        localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
+
+        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
     }
 
     function getAllChildren() {
@@ -403,6 +423,31 @@ function loadDataFromCloud() {
         else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
     }
 
+    // 💡 カレンダーの移動範囲制限（過去2ヶ月 〜 1年先まで）
+    function changeMonth(direction) {
+        let nextMonth = currentMonth + direction;
+        let nextYear = currentYear;
+        if (nextMonth > 11) { nextMonth = 0; nextYear++; }
+        else if (nextMonth < 0) { nextMonth = 11; nextYear--; }
+
+        const minDate = new Date(_todayInit.getFullYear(), _todayInit.getMonth() - 2, 1);
+        const maxDate = new Date(_todayInit.getFullYear() + 1, _todayInit.getMonth(), 1);
+        const targetDate = new Date(nextYear, nextMonth, 1);
+
+        if (targetDate >= minDate && targetDate <= maxDate) {
+            currentMonth = nextMonth;
+            currentYear = nextYear;
+            renderCalendar();
+        }
+    }
+
+    function changeDutyMonth(direction) {
+        dutyMonth += direction;
+        if (dutyMonth > 11) { dutyMonth = 0; dutyYear++; }
+        else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
+        renderDutyList();
+    }
+
     function renderCalendar() {
         updateGlobalFamilySelect();
         document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
@@ -456,20 +501,6 @@ function loadDataFromCloud() {
         }
     }
 
-    function changeMonth(direction) {
-        currentMonth += direction;
-        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-        else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-        renderCalendar();
-    }
-
-    function changeDutyMonth(direction) {
-        dutyMonth += direction;
-        if (dutyMonth > 11) { dutyMonth = 0; dutyYear++; }
-        else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
-        renderDutyList();
-    }
-
     function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
@@ -508,7 +539,8 @@ function loadDataFromCloud() {
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-function updateDutyFromList(dateStr, newDuty) {
+
+    function updateDutyFromList(dateStr, newDuty) {
         manualDutyData[dateStr] = newDuty;
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
@@ -597,8 +629,7 @@ function updateDutyFromList(dateStr, newDuty) {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-
-    function switchModalTab(tabName, event) {
+function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -667,6 +698,7 @@ function updateDutyFromList(dateStr, newDuty) {
             status: status,
             comment: commentVal
         });
+        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
     }
 
     function saveAttendanceComment(dateStr, childName, commentVal) {
@@ -682,6 +714,7 @@ function updateDutyFromList(dateStr, newDuty) {
             status: currentStatus,
             comment: commentVal
         });
+        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
     }
 
     function renderMasterTable() {
@@ -728,6 +761,7 @@ function updateDutyFromList(dateStr, newDuty) {
         renderMasterTable();
         updateGlobalFamilySelect();
         saveDataToCloud();
+        localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
 
     function editMasterItem(id) {
@@ -759,6 +793,7 @@ function updateDutyFromList(dateStr, newDuty) {
         renderMasterTable();
         updateGlobalFamilySelect();
         saveDataToCloud();
+        localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
 
     function updateAttendanceSelect() {
@@ -805,6 +840,7 @@ function updateDutyFromList(dateStr, newDuty) {
 
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
+        allChildren.javaforEach?.(name => {}); // safe guard
         allChildren.forEach(name => {
             let record = (attendanceData[selectedDate] && attendanceData[selectedDate][name]);
             let status = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
