@@ -82,8 +82,6 @@
         .auth-card input { width: 100%; padding: 0.75rem; font-size: 1.2rem; text-align: center; letter-spacing: 0.2rem; margin-bottom: 1rem; box-sizing: border-box; background: #1e293b; color: white; border: 1px solid var(--border); }
         .auth-card button { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: bold; }
         .auth-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
-
-        #day-modal > dyn { background: #0f172a !important; color: white !important; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -194,7 +192,6 @@
     ];
     let practiceData = JSON.parse(localStorage.getItem('cache_practices')) || {};
     let attendanceData = JSON.parse(localStorage.getItem('cache_attendance')) || {};
-    let manualDutyData = JSON.parse(localStorage.getItem('cache_manualDuty')) || {};
 
     let myFamilyId = localStorage.getItem('myFamilyId') ? Number(localStorage.getItem('myFamilyId')) : 1;
 
@@ -280,7 +277,6 @@
                 }
                 if (data.practices && data.practices.length > 0) {
                     let newPractices = {};
-                    let newManualDuty = {};
                     data.practices.forEach(p => {
                         let cleanDate = cleanDateStr(p.date);
                         let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
@@ -292,13 +288,10 @@
                                 memo: p.memo || "",
                                 duty: p.duty || "" 
                             };
-                            if (p.duty) { newManualDuty[cleanDate] = p.duty; }
                         }
                     });
                     practiceData = newPractices;
-                    manualDutyData = newManualDuty;
                     localStorage.setItem('cache_practices', JSON.stringify(practiceData));
-                    localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
                 }
                 if (data.attendance && data.attendance.length > 0) {
                     let newAttendance = {};
@@ -327,11 +320,10 @@
             });
     }
 
-    // 💡 確実にGASへデータを届けるための修正版送信関数
+    // 💡 スプレッドシート側の正しいパラメータ名（duty）に合わせて送信する関数
     function sendToGAS(payload) {
-        const url = GAS_URL + "?action=" + payload.action + "&date=" + encodeURIComponent(payload.date || '') + "&dutyFamilyId=" + encodeURIComponent(payload.dutyFamilyId || '') + "&childName=" + encodeURIComponent(payload.childName || '') + "&status=" + encodeURIComponent(payload.status || '') + "&comment=" + encodeURIComponent(payload.comment || '');
+        const url = GAS_URL + "?action=" + payload.action + "&date=" + encodeURIComponent(payload.date || '') + "&duty=" + encodeURIComponent(payload.duty || '') + "&childName=" + encodeURIComponent(payload.childName || '') + "&status=" + encodeURIComponent(payload.status || '') + "&comment=" + encodeURIComponent(payload.comment || '');
         
-        // 画像読み込みの仕組みを使って確実にサーバーへ命令を飛ばす
         const img = new Image();
         img.src = url;
     }
@@ -344,18 +336,16 @@
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
-                let assignedDuty = manualDutyData[date] || p.duty || "";
                 sendToGAS({
                     action: 'saveDuty',
                     date: cleanDate,
-                    dutyFamilyId: assignedDuty
+                    duty: p.duty || ""
                 });
             }
         });
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
-        localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
 
         if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
     }
@@ -378,13 +368,13 @@
             if (Number(item.id) === Number(myFamilyId)) opt.selected = true;
             select.appendChild(opt);
         });
-        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) &&masterData.length > 0) {
+        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) && masterData.length > 0) {
             myFamilyId = masterData[0].id;
             select.value = myFamilyId;
         }
     }
 
-    function changeMyFamily() {
+function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -401,13 +391,7 @@
 
         let dutyMap = {};
         practiceDates.forEach(d => {
-            if (manualDutyData[d]) {
-                dutyMap[d] = manualDutyData[d];
-            } else if (practiceData[d] && practiceData[d].duty) {
-                dutyMap[d] = practiceData[d].duty;
-            } else {
-                dutyMap[d] = ""; 
-            }
+            dutyMap[d] = practiceData[d].duty || "";
         });
         return dutyMap;
     }
@@ -484,7 +468,7 @@
             
             if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
                 cell.classList.add('practice');
-                let assignedDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
+                let assignedDuty = dutyMap[dateStr] || "";
                 
                 let isMyDuty = (myFamilyName && assignedDuty === myFamilyName);
                 if (isMyDuty) {
@@ -519,7 +503,7 @@
         let html = `<table><thead><tr><th>練習日</th><th>時間</th><th>担当当番</th></tr></thead><tbody>`;
         practiceDates.forEach(dateStr => {
             let p = practiceData[dateStr];
-            let currentDuty = manualDutyData[dateStr] || dutyMap[dateStr] || "";
+            let currentDuty = dutyMap[dateStr] || "";
             
             let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
             selectHtml += `<option value="">（未設定）</option>`;
@@ -540,17 +524,15 @@
     }
 
     function updateDutyFromList(dateStr, newDuty) {
-        manualDutyData[dateStr] = newDuty;
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         
         sendToGAS({
             action: 'saveDuty',
             date: cleanDateStr(dateStr),
-            dutyFamilyId: newDuty
+            duty: newDuty
         });
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
-        localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
         
         const statusEl = document.getElementById('sync-status');
         if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
@@ -563,7 +545,7 @@
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
         let dutyMap = getDutyMapForYearMonth(parseInt(dateStr.split('-')[0]), parseInt(dateStr.split('-')[1]) - 1);
-        let currentDuty = manualDutyData[dateStr] || pData.duty || dutyMap[dateStr] || "";
+        let currentDuty = dutyMap[dateStr] || pData.duty || "";
 
         const contentDiv = document.getElementById('modal-content');
 
@@ -661,7 +643,6 @@
         practiceData[dateStr].isPractice = isChecked;
         if (!isChecked) {
             delete practiceData[dateStr];
-            delete manualDutyData[dateStr];
         }
         saveDataToCloud();
     }
@@ -680,17 +661,11 @@
         practiceData[dateStr].memo = memo;
         practiceData[dateStr].duty = duty;
 
-        if (duty) {
-            manualDutyData[dateStr] = duty;
-        } else {
-            delete manualDutyData[dateStr];
-        }
         saveDataToCloud();
     }
 
     function removePractice(dateStr) {
         delete practiceData[dateStr];
-        delete manualDutyData[dateStr];
         saveDataToCloud();
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
@@ -788,7 +763,7 @@ function saveMasterItem() {
     }
 
     function resetMasterForm() {
-        document.getElementById('edit-id').value = '';
+        document.getElementById('edit-id').value = id = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
