@@ -185,7 +185,6 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbytuCURHsQibG1HZp-Q8r8vhA4UPDE_wtLqOPynuv3G4Y6R5OuBbOSJHAWBVI_LRcA2/exec";
     const CORRECT_PASS = "8745";
 
-    // 🚀 キャッシュから瞬時に復元して即表示する
     let masterData = JSON.parse(localStorage.getItem('cache_master')) || [
         { id: 1, children: ["きはる", "えりみ"], skipDuty: false },
         { id: 2, children: ["えな", "ほの"], skipDuty: false },
@@ -202,15 +201,12 @@
     window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('isAuth') === 'true') {
             document.getElementById('auth-overlay').style.display = 'none';
-            // 💡 画面を即時描画して待ち時間をゼロにする
             updateGlobalFamilySelect();
             renderCalendar();
-            // 裏側でこっそり最新データを取得して更新
             loadDataFromCloud(true);
         }
     });
-
-    function checkPassword() {
+function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -326,38 +322,43 @@
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
             });
     }
-function sendToGAS(payload) {
-        fetch(GAS_URL, {
+
+    function sendToGAS(payload) {
+        return fetch(GAS_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
-        }).catch(err => console.log(err));
+        });
     }
 
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
+        let promises = [];
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
                 let assignedDuty = manualDutyData[date] || p.duty || "";
-                sendToGAS({
+                promises.push(sendToGAS({
                     action: 'saveDuty',
                     date: cleanDate,
                     dutyFamilyId: assignedDuty
-                });
+                }));
             }
         });
 
-        // キャッシュも即時更新
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
         localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
 
-        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
+        Promise.all(promises).then(() => {
+            if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
+        }).catch(() => {
+            if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
+        });
     }
 
     function getAllChildren() {
@@ -423,7 +424,6 @@ function sendToGAS(payload) {
         else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
     }
 
-    // 💡 カレンダーの移動範囲制限（過去2ヶ月 〜 1年先まで）
     function changeMonth(direction) {
         let nextMonth = currentMonth + direction;
         let nextYear = currentYear;
@@ -547,8 +547,7 @@ function sendToGAS(payload) {
         saveDataToCloud();
         renderCalendar();
     }
-
-    function openDayModal(dateStr) {
+function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
         let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
@@ -629,7 +628,8 @@ function sendToGAS(payload) {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-function switchModalTab(tabName, event) {
+
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -840,7 +840,6 @@ function switchModalTab(tabName, event) {
 
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
-        allChildren.javaforEach?.(name => {}); // safe guard
         allChildren.forEach(name => {
             let record = (attendanceData[selectedDate] && attendanceData[selectedDate][name]);
             let status = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
