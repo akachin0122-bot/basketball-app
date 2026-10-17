@@ -806,7 +806,7 @@ function removePractice(dateStr) {
         });
     }
 
-    function saveMasterItem() {
+        function saveMasterItem() {
         const editId = document.getElementById('edit-id').value;
         const c1 = document.getElementById('child-1').value.trim();
         const c2 = document.getElementById('child-2').value.trim();
@@ -818,6 +818,7 @@ function removePractice(dateStr) {
         if (c2) childrenArr.push(c2);
         if (c3) childrenArr.push(c3);
 
+        let targetId = editId;
         if (editId) {
             let item = masterData.find(m => m.id == editId);
             if (item) {
@@ -825,15 +826,27 @@ function removePractice(dateStr) {
                 item.skipDuty = skipDuty;
             }
         } else {
-            let newId = masterData.length > 0 ? Math.max(...masterData.map(m => m.id)) + 1 : 1;
-            masterData.push({ id: newId, children: childrenArr, skipDuty: skipDuty });
+            targetId = masterData.length > 0 ? Math.max(...masterData.map(m => m.id)) + 1 : 1;
+            masterData.push({ id: targetId, children: childrenArr, skipDuty: skipDuty });
         }
+
+        // GASへ送信してスプレッドシート（masterシート）に保存
+        const url = GAS_URL + "?action=saveMaster" +
+                    "&editId=" + encodeURIComponent(targetId) +
+                    "&child1=" + encodeURIComponent(c1) +
+                    "&child2=" + encodeURIComponent(c2) +
+                    "&child3=" + encodeURIComponent(c3) +
+                    "&skipDuty=" + encodeURIComponent(skipDuty);
+        const img = new Image();
+        img.src = url;
+
         resetMasterForm();
         renderMasterTable();
         updateGlobalFamilySelect();
         saveDataToCloud();
         localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
+
 
     function editMasterItem(id) {
         let item = masterData.find(m => m.id == id);
