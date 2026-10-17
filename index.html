@@ -319,14 +319,6 @@
             });
     }
 
-    // 💡 スプレッドシート側の正しいパラメータ名（duty）に合わせて送信する関数
-    function sendToGAS(payload) {
-        const url = GAS_URL + "?action=" + payload.action + "&date=" + encodeURIComponent(payload.date || '') + "&duty=" + encodeURIComponent(payload.duty || '') + "&childName=" + encodeURIComponent(payload.childName || '') + "&status=" + encodeURIComponent(payload.status || '') + "&comment=" + encodeURIComponent(payload.comment || '');
-        
-        const img = new Image();
-        img.src = url;
-    }
-
         function sendToGAS(payload) {
         const url = GAS_URL + "?action=" + payload.action + 
                     "&date=" + encodeURIComponent(payload.date || '') + 
