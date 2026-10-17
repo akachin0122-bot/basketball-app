@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     <title>HN🏀</title>
-<link rel="apple-touch-icon" href="icon2.jpg">
-<link rel="icon" href="icon2.jpg">
+    <link rel="apple-touch-icon" href="icon2.jpg">
+    <link rel="icon" href="icon2.jpg">
     <style>
         :root { 
             --primary: #2563eb; 
@@ -18,14 +18,12 @@
         }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
         
-        /* 🌟 上部バー（黒×緑） */
         header { background: #000000; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
         header h1 { font-size: 1.25rem; margin: 0; color: #22c55e; }
 
         .family-selector-box { background: rgba(255,255,255,0.15); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; }
         .family-selector-box select { background: #1e293b; color: #ffffff; font-weight: bold; padding: 0.2rem; border-radius: 4px; border: 1px solid var(--border); }
         
-        /* 🌟 ナビゲーションタブ */
         nav { display: flex; justify-content: center; background: #0f172a; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.3); overflow-x: auto; }
         nav button { background: none; border: none; padding: 1rem 1.2rem; font-size: 0.95rem; font-weight: bold; cursor: pointer; color: #94a3b8; border-bottom: 3px solid transparent; white-space: nowrap; }
         nav button.active { color: #ffffff; border-bottom-color: var(--primary); }
@@ -37,10 +35,8 @@
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: nowrap; gap: 0.5rem; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         
-        /* 🌟 曜日のヘッダー */
         .calendar-day-header { font-weight: bold; padding: 0.5rem; background: #334155; color: #f8fafc; font-size: 0.85rem; border-radius: 4px; }
         
-        /* 🌟 カレンダーセル・今日の日付枠 */
         .calendar-cell { min-height: 85px; border: 1px solid var(--border); padding: 4px; background: var(--cell-bg); text-align: left; position: relative; cursor: pointer; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 4px; color: var(--text); }
         .calendar-cell.practice { background-color: #1e293b; }
         .calendar-cell.my-duty { background-color: #1e3a8a; border: 2px solid #3b82f6; } 
@@ -71,7 +67,6 @@
         .modal-tab-content.active { display: block; }
         #sync-status { font-size: 0.75rem; color: #93c5fd; margin-left: 0.5rem; }
 
-        /* 🔐 合言葉認証画面 */
         #auth-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95); display: flex;
@@ -93,7 +88,6 @@
 </head>
 <body>
 
-<!-- 🔐 合言葉認証画面 -->
 <div id="auth-overlay">
     <div class="auth-card">
         <h2>​HN 🏀 ROSTER & DUTY</h2>
@@ -119,9 +113,7 @@
     <button onclick="switchView('master', event)">⚙️ 設定</button>
 </nav>
 
-
 <div class="container">
-    <!-- カレンダー画面 -->
     <div id="view-calendar" class="view-section active">
         <div class="calendar-header">
             <button class="btn" onclick="changeMonth(-1)">前の月</button>
@@ -132,7 +124,6 @@
         <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
     </div>
 
-    <!-- 当番一覧画面 -->
     <div id="view-duty" class="view-section">
         <div class="calendar-header">
             <button class="btn" onclick="changeDutyMonth(-1)">前の月</button>
@@ -143,7 +134,6 @@
         <div id="duty-list-container"></div>
     </div>
 
-    <!-- 出欠一覧画面 -->
     <div id="view-attendance" class="view-section">
         <h2 style="color:#f8fafc;">出欠確認一覧</h2>
         <label style="color:#94a3b8;">練習日選択: </label>
@@ -152,7 +142,6 @@
         <div id="attendance-list-container"></div>
     </div>
 
-    <!-- 当番マスタ画面 -->
     <div id="view-master" class="view-section">
         <h2 style="color:#f8fafc;">当番・メンバー管理</h2>
         <div style="background: #0f172a !important; color: #f8fafc !important; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid var(--border);">
@@ -178,7 +167,6 @@
     </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:9999;">
     <div style="padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto;">
         <h3 id="modal-date-title" style="margin-top:0; color:#f8fafc;">日付</h3>
@@ -268,47 +256,50 @@
             masterData = parsed;
         }
     }
-
-    function loadDataFromCloud() {
+function loadDataFromCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（同期中...）";
-        fetch(GAS_URL + "?action=getData")
+        fetch(GAS_URL + "?action=getAllData")
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success') {
-                    if (data.master && data.master.length > 0) {
-                        parseMasterData(data.master);
-                    }
-                    if (data.practices && data.practices.length > 0) {
-                        practiceData = {};
-                        manualDutyData = {};
-                        data.practices.forEach(p => {
-                            let cleanDate = cleanDateStr(p.date);
-                            let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
-                            if (cleanDate && isPracVal) {
-                                practiceData[cleanDate] = { 
-                                    isPractice: true, 
-                                    startTime: p.startTime || "19:00", 
-                                    endTime: p.endTime || "21:00", 
-                                    memo: p.memo || "",
-                                    duty: p.duty || "" 
-                                };
-                                if (p.duty) { manualDutyData[cleanDate] = p.duty; }
-                            }
-                        });
-                    }
-                    if (data.attendance && data.attendance.length > 0) {
-                        attendanceData = {};
-                        data.attendance.forEach(a => {
-                            let cleanDate = cleanDateStr(a.date);
-                            if (cleanDate && a.childName) {
-                                if (!attendanceData[cleanDate]) attendanceData[cleanDate] = {};
-                                attendanceData[cleanDate][a.childName] = a.status;
-                            }
-                        });
-                    }
-                    if(statusEl) { statusEl.textContent = "（同期完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
+                if (data.status === 'error') {
+                    throw new Error(data.message);
                 }
+                if (data.master && data.master.length > 0) {
+                    parseMasterData(data.master);
+                }
+                if (data.practices && data.practices.length > 0) {
+                    practiceData = {};
+                    manualDutyData = {};
+                    data.practices.forEach(p => {
+                        let cleanDate = cleanDateStr(p.date);
+                        let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
+                        if (cleanDate && isPracVal) {
+                            practiceData[cleanDate] = { 
+                                isPractice: true, 
+                                startTime: p.startTime || "19:00", 
+                                endTime: p.endTime || "21:00", 
+                                memo: p.memo || "",
+                                duty: p.duty || "" 
+                            };
+                            if (p.duty) { manualDutyData[cleanDate] = p.duty; }
+                        }
+                    });
+                }
+                if (data.attendance && data.attendance.length > 0) {
+                    attendanceData = {};
+                    data.attendance.forEach(a => {
+                        let cleanDate = cleanDateStr(a.date);
+                        if (cleanDate && a.childName) {
+                            if (!attendanceData[cleanDate]) attendanceData[cleanDate] = {};
+                            attendanceData[cleanDate][a.childName] = {
+                                status: a.status || '参加',
+                                comment: a.comment || ''
+                            };
+                        }
+                    });
+                }
+                if(statusEl) { statusEl.textContent = "（同期完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
                 updateGlobalFamilySelect();
                 renderCalendar();
             })
@@ -318,52 +309,35 @@
                 renderCalendar();
             });
     }
-function saveDataToCloud() {
+
+    function sendToGAS(payload) {
+        fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }).catch(err => console.log(err));
+    }
+
+    function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
-        let practicesArr = [];
+        // 当番・練習データの保存
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
                 let assignedDuty = manualDutyData[date] || p.duty || "";
-                practicesArr.push({ date: cleanDate, isPractice: true, startTime: p.startTime, endTime: p.endTime, memo: p.memo, duty: assignedDuty });
-            }
-        });
-
-        let attendanceArr = [];
-        Object.keys(attendanceData).forEach(date => {
-            let cleanDateStrVal = cleanDateStr(date);
-            if (cleanDateStrVal) {
-                let kids = attendanceData[date];
-                Object.keys(kids).forEach(childName => {
-                    attendanceArr.push({ date: cleanDateStrVal, childName: childName, status: kids[childName] });
+                sendToGAS({
+                    action: 'saveDuty',
+                    date: cleanDate,
+                    dutyFamilyId: assignedDuty
                 });
             }
         });
 
-        let masterArr = masterData.map(m => {
-            let obj = { id: m.id, skipDuty: m.skipDuty };
-            if (m.children && m.children.length > 0) {
-                for (let i = 0; i < m.children.length; i++) {
-                    obj['child' + (i + 1)] = m.children[i];
-                }
-            }
-            return obj;
-        });
-
-        fetch(GAS_URL, {
-            method: 'POST',
-            body: "action=saveData&data=" + encodeURIComponent(JSON.stringify({ practices: practicesArr, attendance: attendanceArr, master: masterArr })),
-            headers: { "Content-Type": "application/x-www-form-urlencoded" }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
-            }
-        });
+        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 2000); }
     }
 
     function getAllChildren() {
@@ -521,7 +495,6 @@ function saveDataToCloud() {
             selectHtml += `<option value="">（未設定）</option>`;
             masterData.forEach(family => {
                 if (!family.children || !family.children[0]) return;
-                // 🌟 免除世帯はプルダウンに表示しない
                 if (family.skipDuty) return;
 
                 let familyName = family.children[0] + "家";
@@ -535,8 +508,7 @@ function saveDataToCloud() {
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-
-    function updateDutyFromList(dateStr, newDuty) {
+function updateDutyFromList(dateStr, newDuty) {
         manualDutyData[dateStr] = newDuty;
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
@@ -556,7 +528,6 @@ function saveDataToCloud() {
         let dutyOptions = '<option value="">（未設定）</option>';
         masterData.forEach(family => {
             if (!family.children || !family.children[0]) return;
-            // 🌟 免除世帯はモーダルのプルダウンにも表示しない
             if (family.skipDuty) return;
 
             let familyName = family.children[0] + "家";
@@ -574,7 +545,10 @@ function saveDataToCloud() {
             attendanceHtml += `<div style="background:#1e293b; padding:0.75rem; border-radius:6px; border:1px solid var(--border);">`;
             myFamily.children.forEach(childName => {
                 if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-                let currentStatus = attendanceData[dateStr][childName] || '参加';
+                let record = attendanceData[dateStr][childName];
+                let currentStatus = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
+                let currentComment = typeof record === 'object' && record !== null ? (record.comment || '') : '';
+
                 attendanceHtml += `
                     <div style="margin-bottom: 0.75rem;">
                         <strong style="color:white;">${childName}</strong><br>
@@ -584,12 +558,11 @@ function saveDataToCloud() {
                             <option value="欠席(病気)" ${currentStatus === '欠席(病気)' ? 'selected' : ''}>欠席（病気）</option>
                             <option value="欠席(家庭都合)" ${currentStatus === '欠席(家庭都合)' ? 'selected' : ''}>欠席（家庭都合）</option>
                         </select>
-<input type="text" placeholder="コメント（例: 10時遅刻）" 
-       value="${attendanceData[dateStr] && attendanceData[dateStr][childName] && attendanceData[dateStr][childName].comment ? attendanceData[dateStr][childName].comment : ''}"
-       onchange="saveAttendanceComment('${dateStr}', '${childName}', this.value)"
-       style="width:100%; margin-top:0.3rem; padding:0.4rem; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; box-sizing:border-box; font-size:0.85rem;">
-</div> <!-- ← ここに </div> を持ってくる -->
-
+                        <input type="text" placeholder="コメント（例: 10時遅刻）" 
+                               value="${currentComment}"
+                               onchange="saveAttendanceComment('${dateStr}', '${childName}', this.value)"
+                               style="width:100%; margin-top:0.3rem; padding:0.4rem; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; box-sizing:border-box; font-size:0.85rem;">
+                    </div>
                 `;
             });
             attendanceHtml += `</div>`;
@@ -624,7 +597,8 @@ function saveDataToCloud() {
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         modal.style.display = 'flex';
     }
-function switchModalTab(tabName, event) {
+
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -682,8 +656,32 @@ function switchModalTab(tabName, event) {
 
     function saveAttendance(dateStr, childName, status) {
         if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-        attendanceData[dateStr][childName] = status;
-        saveDataToCloud();
+        if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = {};
+        attendanceData[dateStr][childName].status = status;
+        
+        let commentVal = attendanceData[dateStr][childName].comment || '';
+        sendToGAS({
+            action: 'saveAttendance',
+            date: dateStr,
+            childName: childName,
+            status: status,
+            comment: commentVal
+        });
+    }
+
+    function saveAttendanceComment(dateStr, childName, commentVal) {
+        if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
+        if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = {};
+        attendanceData[dateStr][childName].comment = commentVal;
+        
+        let currentStatus = attendanceData[dateStr][childName].status || '参加';
+        sendToGAS({
+            action: 'saveAttendance',
+            date: dateStr,
+            childName: childName,
+            status: currentStatus,
+            comment: commentVal
+        });
     }
 
     function renderMasterTable() {
@@ -775,7 +773,7 @@ function switchModalTab(tabName, event) {
             return;
         }
 
-                const _t = new Date();
+        const _t = new Date();
         const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
         let targetDate = practiceDates[0];
         let futureDates = practiceDates.filter(d => d >= todayStr);
@@ -808,46 +806,27 @@ function switchModalTab(tabName, event) {
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
         allChildren.forEach(name => {
-            let actualStatus = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
-            if (actualStatus === '参加') counts.参加++;
-            else if (actualStatus === '遅刻') counts.遅刻++;
-            else if (actualStatus.includes('欠席')) counts.欠席++;
+            let record = (attendanceData[selectedDate] && attendanceData[selectedDate][name]);
+            let status = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
+            if (status === '参加') counts.参加++;
+            else if (status === '遅刻') counts.遅刻++;
+            else if (status.includes('欠席')) counts.欠席++;
         });
 
         summaryBox.innerHTML = `<span style="color:#4ade80;">参加: ${counts.参加}人</span> <span style="color:#facc15;">遅刻: ${counts.遅刻}人</span> <span style="color:#f87171;">欠席: ${counts.欠席}人</span>`;
-        let html = `<table><thead><tr><th>名前</th><th>出欠状況</th></tr></thead><tbody>`;
+        
+        let html = `<table><thead><tr><th>名前</th><th>出欠状況</th><th>コメント</th></tr></thead><tbody>`;
         allChildren.forEach(name => {
-            let status = (attendanceData[selectedDate] && attendanceData[selectedDate][name]) || '参加';
+            let record = (attendanceData[selectedDate] && attendanceData[selectedDate][name]);
+            let status = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
+            let comment = typeof record === 'object' && record !== null ? (record.comment || '') : '';
+
             let style = status.includes('欠席') ? 'color:#f87171; font-weight:bold;' : (status === '遅刻' ? 'color:#facc15; font-weight:bold;' : 'color:#4ade80; font-weight:bold;');
-            html += `<tr><td>${name}</td><td><span style="${style}">${status}</span></td></tr>`;
+            html += `<tr><td>${name}</td><td><span style="${style}">${status}</span></td><td>${comment}</td></tr>`;
         });
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-    function saveAttendanceComment(dateStr, childName, commentVal) {
-    if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-    if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = { status: '未設定' };
-    
-    // コメントを保存
-    attendanceData[dateStr][childName].comment = commentVal;
-    
-    // GASへ送信
-    const payload = {
-        action: 'saveAttendance',
-        date: dateStr,
-        childName: childName,
-        status: attendanceData[dateStr][childName].status || '未設定',
-        comment: commentVal
-    };
-    
-    fetch(GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-}
-
 </script>
 </body>
 </html>
