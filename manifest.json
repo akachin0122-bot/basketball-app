@@ -1,0 +1,15 @@
+{
+  "name": "HN 🏀 ROSTER & DUTY",
+  "short_name": "HN当番",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
