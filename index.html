@@ -135,13 +135,14 @@
         <div id="duty-list-container"></div>
     </div>
 
-    <div id="view-attendance" class="view-section">
+        <div id="view-attendance" class="view-section">
         <h2 style="color:#f8fafc;">出欠確認一覧</h2>
-        <label style="color:#94a3b8;">練習日選択: </label>
-        <select id="attendance-date-select" onchange="renderAttendanceList()" style="padding: 0.4rem; margin-bottom: 1rem;"></select>
+        <label style="color:#94a3b8; display: block; margin-bottom: 0.3rem;">練習日選択: </label>
+        <select id="attendance-date-select" onchange="renderAttendanceList()" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem; box-sizing: border-box;"></select>
         <div id="attendance-summary" class="summary-box"></div>
         <div id="attendance-list-container"></div>
     </div>
+
 
     <div id="view-master" class="view-section">
         <h2 style="color:#f8fafc;">当番・メンバー管理</h2>
