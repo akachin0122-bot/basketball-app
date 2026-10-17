@@ -168,7 +168,7 @@
 <div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:9999;">
     <div style="background: #0f172a; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto; border: 1px solid var(--border);">
         <h3 id="modal-date-title" style="margin-top:0; color:#f8fafc;">日付</h3>
-<div class="modal-tabs" id="modal-tabs-header">
+        <div class="modal-tabs" id="modal-tabs-header">
             <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
             <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
         </div>
@@ -275,7 +275,7 @@
                 if (data.master && data.master.length > 0) {
                     parseMasterData(data.master);
                 }
-                                if (data.practices && data.practices.length > 0) {
+                if (data.practices && data.practices.length > 0) {
                     let newPractices = {};
                     data.practices.forEach(p => {
                         let cleanDate = cleanDateStr(p.date);
@@ -318,8 +318,8 @@
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
             });
     }
-
-        function sendToGAS(payload) {
+ // 正確にGASへデータをピンポイント送信する関数
+    function sendToGAS(payload) {
         const url = GAS_URL + "?action=" + payload.action + 
                     "&date=" + encodeURIComponent(payload.date || '') + 
                     "&duty=" + encodeURIComponent(payload.duty || '') + 
@@ -337,32 +337,17 @@
 
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
-        if(statusEl) statusEl.textContent = "（保存中...）";
+        if(statusEl) statusEl.textContent = "（保存完了）";
         
-        Object.keys(practiceData).forEach(date => {
-            let cleanDate = cleanDateStr(date);
-            if (cleanDate && practiceData[date].isPractice) {
-                let p = practiceData[date];
-                sendToGAS({
-                    action: 'saveDuty',
-                    date: cleanDate,
-                    duty: p.duty || "",
-                    startTime: p.startTime || "19:00",
-                    endTime: p.endTime || "21:00",
-                    memo: p.memo || "",
-                    isPractice: true
-                });
-            }
-        });
-
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
 
-        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
+        if(statusEl) { 
+            setTimeout(() => { statusEl.textContent = ""; }, 1500); 
+        }
     }
 
-
-        function getAllChildren() {
+    function getAllChildren() {
         let list = [];
         masterData.forEach(item => { 
             if (item.children) {
@@ -372,7 +357,6 @@
         });
         return list;
     }
-
 
     function updateGlobalFamilySelect() {
         const select = document.getElementById('global-my-family');
@@ -392,7 +376,7 @@
         }
     }
 
-function changeMyFamily() {
+    function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -545,10 +529,15 @@ function changeMyFamily() {
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         
+        let p = practiceData[dateStr];
         sendToGAS({
             action: 'saveDuty',
             date: cleanDateStr(dateStr),
-            duty: newDuty
+            duty: newDuty,
+            startTime: p.startTime || "19:00",
+            endTime: p.endTime || "21:00",
+            memo: p.memo || "",
+            isPractice: true
         });
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         
@@ -640,7 +629,7 @@ function changeMyFamily() {
         modal.style.display = 'flex';
     }
 
-    function switchModalTab(tabName, event) {
+   function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -659,10 +648,27 @@ function changeMyFamily() {
             practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
         }
         practiceData[dateStr].isPractice = isChecked;
-        if (!isChecked) {
+        
+        if (isChecked) {
+            let p = practiceData[dateStr];
+            sendToGAS({
+                action: 'saveDuty',
+                date: cleanDateStr(dateStr),
+                duty: p.duty || "",
+                startTime: p.startTime || "19:00",
+                endTime: p.endTime || "21:00",
+                memo: p.memo || "",
+                isPractice: true
+            });
+        } else {
             delete practiceData[dateStr];
+            const url = GAS_URL + "?action=deletePractice&date=" + encodeURIComponent(dateStr);
+            const img = new Image();
+            img.src = url;
         }
-        saveDataToCloud();
+
+        localStorage.setItem('cache_practices', JSON.stringify(practiceData));
+        renderCalendar();
     }
 
     function updatePracticeInfo(dateStr) {
@@ -678,14 +684,24 @@ function changeMyFamily() {
         practiceData[dateStr].endTime = end;
         practiceData[dateStr].memo = memo;
         practiceData[dateStr].duty = duty;
+        practiceData[dateStr].isPractice = true;
 
-        saveDataToCloud();
+        sendToGAS({
+            action: 'saveDuty',
+            date: cleanDateStr(dateStr),
+            duty: duty,
+            startTime: start,
+            endTime: end,
+            memo: memo,
+            isPractice: true
+        });
+
+        localStorage.setItem('cache_practices', JSON.stringify(practiceData));
     }
 
-            function removePractice(dateStr) {
+    function removePractice(dateStr) {
         delete practiceData[dateStr];
         
-        // GASへ削除を通知
         const url = GAS_URL + "?action=deletePractice&date=" + encodeURIComponent(dateStr);
         const img = new Image();
         img.src = url;
@@ -694,7 +710,6 @@ function changeMyFamily() {
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
     }
-
 
     function saveAttendance(dateStr, childName, status) {
         if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
@@ -745,7 +760,8 @@ function changeMyFamily() {
             </tr>`;
         });
     }
-function saveMasterItem() {
+
+    function saveMasterItem() {
         const editId = document.getElementById('edit-id').value;
         const c1 = document.getElementById('child-1').value.trim();
         const c2 = document.getElementById('child-2').value.trim();
@@ -788,7 +804,7 @@ function saveMasterItem() {
     }
 
     function resetMasterForm() {
-        document.getElementById('edit-id').value = id = '';
+        document.getElementById('edit-id').value = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
         document.getElementById('child-3').value = '';
