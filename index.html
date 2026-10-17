@@ -635,7 +635,7 @@
                         </select>
                         <input type="text" placeholder="コメント（例: 10時遅刻）" 
                                value="${currentComment}"
-                               onchange="saveAttendanceComment('${dateStr}', '${childName}', this.value)"
+                               oninput="saveAttendanceComment('${dateStr}', '${childName}', this.value)"
                                style="width:100%; margin-top:0.3rem; padding:0.4rem; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; box-sizing:border-box; font-size:0.85rem;">
                     </div>
                 `;
