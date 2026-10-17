@@ -544,12 +544,15 @@
             return;
         }
 
-        let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
+               let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
 
-        let html = `<table><thead><tr><th>練習日</th><th>時間</th><th>担当当番</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th style="width:22%;">練習日</th><th style="width:25%;">時間</th><th style="width:53%;">担当当番</th></tr></thead><tbody>`;
         practiceDates.forEach(dateStr => {
             let p = practiceData[dateStr];
             let currentDuty = dutyMap[dateStr] || "";
+            
+            let parts = dateStr.split('-');
+            let shortDate = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : dateStr;
             
             let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
             selectHtml += `<option value="">（未設定）</option>`;
@@ -563,10 +566,11 @@
             });
             selectHtml += `</select>`;
 
-            html += `<tr><td><strong>${dateStr}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
+            html += `<tr><td><strong>${shortDate}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
         });
         html += `</tbody></table>`;
         container.innerHTML = html;
+
     }
 
     function updateDutyFromList(dateStr, newDuty) {
