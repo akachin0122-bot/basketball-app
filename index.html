@@ -83,7 +83,7 @@
         .auth-card button { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: bold; }
         .auth-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
 
-        #day-modal > div { background: #0f172a !important; color: white !important; border: 1px solid var(--border); }
+        #day-modal > dyn { background: #0f172a !important; color: white !important; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -279,44 +279,40 @@
                     parseMasterData(data.master);
                 }
                 if (data.practices && data.practices.length > 0) {
-                    // 💡 同期完了時に、自分が変更してまだクラウドに反映しきれていない当番（manualDutyData）を上書きされないように保護するセーフガード
+                    let newPractices = {};
+                    let newManualDuty = {};
                     data.practices.forEach(p => {
                         let cleanDate = cleanDateStr(p.date);
                         let isPracVal = p.isPractice === true || p.isPractice === 'true' || p.isPractice === 'TRUE';
                         if (cleanDate && isPracVal) {
-                            if (!practiceData[cleanDate]) {
-                                practiceData[cleanDate] = {};
-                            }
-                            practiceData[cleanDate].isPractice = true;
-                            practiceData[cleanDate].startTime = p.startTime || "19:00";
-                            practiceData[cleanDate].endTime = p.endTime || "21:00";
-                            practiceData[cleanDate].memo = p.memo || "";
-                            
-                            // すでに手動変更していなければサーバーの値を採用
-                            if (!manualDutyData[cleanDate] && p.duty) {
-                                practiceData[cleanDate].duty = p.duty;
-                            } else if (manualDutyData[cleanDate]) {
-                                practiceData[cleanDate].duty = manualDutyData[cleanDate];
-                            }
+                            newPractices[cleanDate] = { 
+                                isPractice: true, 
+                                startTime: p.startTime || "19:00", 
+                                endTime: p.endTime || "21:00", 
+                                memo: p.memo || "",
+                                duty: p.duty || "" 
+                            };
+                            if (p.duty) { newManualDuty[cleanDate] = p.duty; }
                         }
                     });
+                    practiceData = newPractices;
+                    manualDutyData = newManualDuty;
                     localStorage.setItem('cache_practices', JSON.stringify(practiceData));
                     localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
                 }
                 if (data.attendance && data.attendance.length > 0) {
+                    let newAttendance = {};
                     data.attendance.forEach(a => {
                         let cleanDate = cleanDateStr(a.date);
                         if (cleanDate && a.childName) {
-                            if (!attendanceData[cleanDate]) attendanceData[cleanDate] = {};
-                            // すでに自分が変更していなければサーバーの値を採用
-                            if (!attendanceData[cleanDate][a.childName]) {
-                                attendanceData[cleanDate][a.childName] = {
-                                    status: a.status || '参加',
-                                    comment: a.comment || ''
-                                };
-                            }
+                            if (!newAttendance[cleanDate]) newAttendance[cleanDate] = {};
+                            newAttendance[cleanDate][a.childName] = {
+                                status: a.status || '参加',
+                                comment: a.comment || ''
+                            };
                         }
                     });
+                    attendanceData = newAttendance;
                     localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
                 }
                 if(statusEl) { 
@@ -331,29 +327,29 @@
             });
     }
 
+    // 💡 確実にGASへデータを届けるための修正版送信関数
     function sendToGAS(payload) {
-        return fetch(GAS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+        const url = GAS_URL + "?action=" + payload.action + "&date=" + encodeURIComponent(payload.date || '') + "&dutyFamilyId=" + encodeURIComponent(payload.dutyFamilyId || '') + "&childName=" + encodeURIComponent(payload.childName || '') + "&status=" + encodeURIComponent(payload.status || '') + "&comment=" + encodeURIComponent(payload.comment || '');
+        
+        // 画像読み込みの仕組みを使って確実にサーバーへ命令を飛ばす
+        const img = new Image();
+        img.src = url;
     }
-function saveDataToCloud() {
+
+    function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
         
-        let promises = [];
         Object.keys(practiceData).forEach(date => {
             let cleanDate = cleanDateStr(date);
             if (cleanDate && practiceData[date].isPractice) {
                 let p = practiceData[date];
                 let assignedDuty = manualDutyData[date] || p.duty || "";
-                promises.push(sendToGAS({
+                sendToGAS({
                     action: 'saveDuty',
                     date: cleanDate,
                     dutyFamilyId: assignedDuty
-                }));
+                });
             }
         });
 
@@ -361,11 +357,7 @@ function saveDataToCloud() {
         localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
         localStorage.setItem('cache_manualDuty', JSON.stringify(manualDutyData));
 
-        Promise.all(promises).then(() => {
-            if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
-        }).catch(() => {
-            if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
-        });
+        if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
     }
 
     function getAllChildren() {
@@ -386,7 +378,7 @@ function saveDataToCloud() {
             if (Number(item.id) === Number(myFamilyId)) opt.selected = true;
             select.appendChild(opt);
         });
-        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) && masterData.length > 0) {
+        if (!masterData.some(item => Number(item.id) === Number(myFamilyId)) &&masterData.length > 0) {
             myFamilyId = masterData[0].id;
             select.value = myFamilyId;
         }
@@ -552,7 +544,6 @@ function saveDataToCloud() {
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         
-        // 💡 当番一覧から変更した瞬間にクラウドへ即時保存＆キャッシュ更新
         sendToGAS({
             action: 'saveDuty',
             date: cleanDateStr(dateStr),
@@ -696,7 +687,8 @@ function saveDataToCloud() {
         }
         saveDataToCloud();
     }
-function removePractice(dateStr) {
+
+    function removePractice(dateStr) {
         delete practiceData[dateStr];
         delete manualDutyData[dateStr];
         saveDataToCloud();
@@ -753,8 +745,7 @@ function removePractice(dateStr) {
             </tr>`;
         });
     }
-
-    function saveMasterItem() {
+function saveMasterItem() {
         const editId = document.getElementById('edit-id').value;
         const c1 = document.getElementById('child-1').value.trim();
         const c2 = document.getElementById('child-2').value.trim();
