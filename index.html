@@ -879,8 +879,16 @@ function removePractice(dateStr) {
         document.getElementById('cancel-btn').style.display = 'none';
     }
 
-    function deleteMasterItem(id) {
+        function deleteMasterItem(id) {
+        if (!confirm('このメンバー（世帯）を削除してもよろしいですか？')) return;
+
         masterData = masterData.filter(item => item.id != id);
+        
+        // スプレッドシート（masterシート）から削除する通信を送信
+        const url = GAS_URL + "?action=deleteMaster&editId=" + encodeURIComponent(id);
+        const img = new Image();
+        img.src = url;
+
         renderMasterTable();
         updateGlobalFamilySelect();
         saveDataToCloud();
