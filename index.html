@@ -327,6 +327,22 @@
         img.src = url;
     }
 
+        function sendToGAS(payload) {
+        const url = GAS_URL + "?action=" + payload.action + 
+                    "&date=" + encodeURIComponent(payload.date || '') + 
+                    "&duty=" + encodeURIComponent(payload.duty || '') + 
+                    "&startTime=" + encodeURIComponent(payload.startTime || '19:00') +
+                    "&endTime=" + encodeURIComponent(payload.endTime || '21:00') +
+                    "&memo=" + encodeURIComponent(payload.memo || '') +
+                    "&isPractice=" + encodeURIComponent(payload.isPractice !== false) +
+                    "&childName=" + encodeURIComponent(payload.childName || '') + 
+                    "&status=" + encodeURIComponent(payload.status || '') + 
+                    "&comment=" + encodeURIComponent(payload.comment || '');
+        
+        const img = new Image();
+        img.src = url;
+    }
+
     function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存中...）";
@@ -338,7 +354,11 @@
                 sendToGAS({
                     action: 'saveDuty',
                     date: cleanDate,
-                    duty: p.duty || ""
+                    duty: p.duty || "",
+                    startTime: p.startTime || "19:00",
+                    endTime: p.endTime || "21:00",
+                    memo: p.memo || "",
+                    isPractice: true
                 });
             }
         });
@@ -348,6 +368,7 @@
 
         if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
     }
+
 
         function getAllChildren() {
         let list = [];
@@ -669,12 +690,19 @@ function changeMyFamily() {
         saveDataToCloud();
     }
 
-    function removePractice(dateStr) {
+            function removePractice(dateStr) {
         delete practiceData[dateStr];
-        saveDataToCloud();
+        
+        // GASへ削除を通知
+        const url = GAS_URL + "?action=deletePractice&date=" + encodeURIComponent(dateStr);
+        const img = new Image();
+        img.src = url;
+
+        localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
     }
+
 
     function saveAttendance(dateStr, childName, status) {
         if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
