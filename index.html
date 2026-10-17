@@ -350,11 +350,17 @@
         if(statusEl) { statusEl.textContent = "（保存完了）"; setTimeout(() => { statusEl.textContent = ""; }, 1500); }
     }
 
-    function getAllChildren() {
+        function getAllChildren() {
         let list = [];
-        masterData.forEach(item => { if (item.children) list = list.concat(item.children); });
+        masterData.forEach(item => { 
+            if (item.children) {
+                let validKids = item.children.filter(c => c && c !== "false" && String(c).trim() !== "");
+                list = list.concat(validKids);
+            } 
+        });
         return list;
     }
+
 
     function updateGlobalFamilySelect() {
         const select = document.getElementById('global-my-family');
