@@ -132,6 +132,9 @@
         </div>
         <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。担当を設定・変更する場合はここから選んでください。</p>
         <div id="duty-list-container"></div>
+        <div style="margin-top: 1.5rem; text-align: center;">
+            <button class="btn" onclick="copyDutyTextForLine()" style="background-color: #22c55e; font-size: 0.9rem; padding: 0.6rem 1.2rem; width: 100%;">📋 LINE用当番テキストをコピーする</button>
+        </div>
     </div>
 
         <div id="view-attendance" class="view-section">
@@ -961,6 +964,48 @@ function removePractice(dateStr) {
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
+        // LINE用に当番テキストを生成してクリップボードにコピーする関数
+    function copyDutyTextForLine() {
+        let practiceDates = Object.keys(practiceData).filter(d => {
+            let cleanD = cleanDateStr(d);
+            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+        }).sort();
+
+        if (practiceDates.length === 0) {
+            alert('この月の練習日は設定されていません。');
+            return;
+        }
+
+        let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
+
+        let text = `【葉梨ミニバス 高学年当番・スケジュール】\n`;
+        text += `📅 ${dutyMonth + 1}月のお手伝い・当番表が確定しました！\n`;
+        text += `（※土日等の時間はアプリで確認してね！）\n`;
+        text += `https://akachin0122-bot.github.io/basketball-app/\n\n`;
+        text += `--- ${dutyMonth + 1}月の当番予定 ---\n`;
+
+        practiceDates.forEach(dateStr => {
+            let parts = dateStr.split('-');
+            let shortDate = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : dateStr;
+            
+            let dObj = new Date(dateStr);
+            let weeks = ['日', '月', '火', '水', '木', '金', '土'];
+            let weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
+
+            let dutyName = dutyMap[dateStr] || '未設定';
+            text += `${shortDate}${weekStr} ${dutyName}\n`;
+        });
+
+        text += `\n（※何かあればご連絡ください！）`;
+
+        // クリップボードへコピー
+        navigator.clipboard.writeText(text).then(() => {
+            alert('LINE用の当番テキストをコピーしました！\nLINEのトークにそのまま貼り付けて送信できます✨');
+        }).catch(err => {
+            alert('コピーに失敗しました...');
+        });
+    }
+
 </script>
 </body>
 </html>
