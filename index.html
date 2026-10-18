@@ -998,9 +998,22 @@ function removePractice(dateStr) {
 
         text += `\n（※何かあればご連絡ください！）`;
 
-        // クリップボードへコピー
+               // クリップボードへコピー
         navigator.clipboard.writeText(text).then(() => {
-            alert('LINE用の当番テキストをコピーしました！\nLINEのトークにそのまま貼り付けて送信できます✨');
+            // ボタンを一時的に「コピー完了！」に変える演出
+            const btn = document.querySelector('button[onclick="copyDutyTextForLine()"]');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                const originalBg = btn.style.backgroundColor;
+                
+                btn.innerHTML = '✨ コピー完了しました！';
+                btn.style.backgroundColor = '#2563eb'; // 青色に変化
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = originalBg;
+                }, 2000); // 2秒後に元の緑色のボタンに戻す
+            }
         }).catch(err => {
             alert('コピーに失敗しました...');
         });
