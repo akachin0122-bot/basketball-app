@@ -212,8 +212,7 @@
             loadDataFromCloud(true);
         }
     });
-
-    function checkPassword() {
+function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -433,8 +432,7 @@
             renderCalendar();
         }
     }
-
-    function getDutyMapForYearMonth(y, m) {
+function getDutyMapForYearMonth(y, m) {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
             return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
@@ -576,7 +574,8 @@
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-function updateDutyFromList(dateStr, newDuty) {
+
+    function updateDutyFromList(dateStr, newDuty) {
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         
@@ -681,14 +680,13 @@ function updateDutyFromList(dateStr, newDuty) {
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
         
-        // モーダルの下部にある「登録」ボタンをここで動的に生成（ボタンを押すと一括保存して閉じる）
+        // モーダル下部の「登録」ボタンでまとめて保存する処理を連動
         const footerBtnContainer = document.getElementById('modal-footer-btn-container');
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
     }
-
-    function switchModalTab(tabName, event) {
+function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -701,7 +699,7 @@ function updateDutyFromList(dateStr, newDuty) {
         renderCalendar();
     }
 
-    // 「登録」ボタンを押したときに、出欠状況とコメントをまとめて正確に上書き保存する関数
+    // 「登録」ボタンを押したときに、出欠ステータスとコメントを確実に上書き保存する関数
     function saveAllModalData(dateStr) {
         let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
         if (myFamily && myFamily.children) {
@@ -884,7 +882,7 @@ function updateDutyFromList(dateStr, newDuty) {
         document.getElementById('cancel-btn').style.display = 'none';
     }
 
-  function deleteMasterItem(id) {
+    function deleteMasterItem(id) {
         if (!confirm('このメンバー（世帯）を削除してもよろしいですか？')) return;
 
         masterData = masterData.filter(item => item.id != id);
@@ -1016,8 +1014,7 @@ function updateDutyFromList(dateStr, newDuty) {
             alert('コピーに失敗しました...');
         });
     }
-
-    function copySinglePracticeNotice(dateStr) {
+function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
