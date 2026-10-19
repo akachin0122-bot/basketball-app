@@ -113,17 +113,18 @@
 
 <div class="container">
     <div id="view-calendar" class="view-section active">
-                <div class="calendar-header">
+        <div class="calendar-header">
             <button class="btn" onclick="changeMonth(-1)">前の月</button>
             <h2 id="calendar-title" style="margin:0; font-size: 1rem; white-space: nowrap; color: #f8fafc;"></h2>
             <button class="btn" onclick="changeMonth(1)">次の月</button>
         </div>
-       <div class="calendar-grid" id="calendar-grid"></div>
-<div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
-    <button class="btn btn-warning" onclick="bulkAddTueWedFri()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">火水金一括登録</button>
-</div>
-        </div> 
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
+            <button class="btn btn-warning" onclick="bulkAddTueWedFri()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">火水金一括登録</button>
+        </div>
+    </div> 
+
     <div id="view-duty" class="view-section">
         <div class="calendar-header">
             <button class="btn" onclick="changeDutyMonth(-1)">前の月</button>
@@ -137,14 +138,13 @@
         </div>
     </div>
 
-        <div id="view-attendance" class="view-section">
+    <div id="view-attendance" class="view-section">
         <h2 style="color:#f8fafc;">出欠確認一覧</h2>
         <label style="color:#94a3b8; display: block; margin-bottom: 0.3rem;">練習日選択: </label>
         <select id="attendance-date-select" onchange="renderAttendanceList()" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem; box-sizing: border-box;"></select>
         <div id="attendance-summary" class="summary-box"></div>
         <div id="attendance-list-container"></div>
     </div>
-
 
     <div id="view-master" class="view-section">
         <h2 style="color:#f8fafc;">当番・メンバー管理</h2>
@@ -182,11 +182,10 @@
             <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
         </div>
         <div id="modal-content"></div>
-        <div style="text-align: right; margin-top: 1.5rem;">
-            <button class="btn" onclick="closeModal()">登録</button>
+        <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container">
+            <!-- 登録ボタンは openDayModal 内で動的に生成・制御します -->
         </div>
     </div>
-</div>
 </div>
 
 <script>
@@ -345,7 +344,7 @@
         img.src = url;
     }
 
-  function saveDataToCloud() {
+    function saveDataToCloud() {
         const statusEl = document.getElementById('sync-status');
         if(statusEl) statusEl.textContent = "（保存完了）";
         
@@ -357,7 +356,6 @@
         }
     }
 
-    // 火曜・水曜・金曜を一括登録する関数
     function bulkAddTueWedFri() {
         if (!confirm(`${currentYear}年 ${currentMonth + 1}月の火曜・水曜・金曜をすべて練習日に一括登録しますか？\n（不要な日はあとから個別削除できます）`)) {
             return;
@@ -368,7 +366,7 @@
 
         for (let day = 1; day <= totalDays; day++) {
             let dateObj = new Date(currentYear, currentMonth, day);
-            let dayOfWeek = dateObj.getDay(); // 2:火, 3:水, 5:金
+            let dayOfWeek = dateObj.getDay();
 
             if (dayOfWeek === 2 || dayOfWeek === 3 || dayOfWeek === 5) {
                 let dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -551,7 +549,7 @@
             return;
         }
 
-               let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
+        let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
 
         let html = `<table><thead><tr><th style="width:22%;">練習日</th><th style="width:25%;">時間</th><th style="width:53%;">担当当番</th></tr></thead><tbody>`;
         practiceDates.forEach(dateStr => {
@@ -577,10 +575,8 @@
         });
         html += `</tbody></table>`;
         container.innerHTML = html;
-
     }
-
-    function updateDutyFromList(dateStr, newDuty) {
+function updateDutyFromList(dateStr, newDuty) {
         if (!practiceData[dateStr]) practiceData[dateStr] = { isPractice: true };
         practiceData[dateStr].duty = newDuty;
         
@@ -638,15 +634,15 @@
                 attendanceHtml += `
                     <div style="margin-bottom: 0.75rem;">
                         <strong style="color:white;">${childName}</strong><br>
-                        <select onchange="saveAttendance('${dateStr}', '${childName}', this.value)" style="margin-top: 4px; width: 100%;">
+                        <select id="status-${dateStr}-${childName}" style="margin-top: 4px; width: 100%;">
                             <option value="参加" ${currentStatus === '参加' ? 'selected' : ''}>参加</option>
                             <option value="遅刻" ${currentStatus === '遅刻' ? 'selected' : ''}>遅刻</option>
                             <option value="欠席(病気)" ${currentStatus === '欠席(病気)' ? 'selected' : ''}>欠席（病気）</option>
                             <option value="欠席(家庭都合)" ${currentStatus === '欠席(家庭都合)' ? 'selected' : ''}>欠席（家庭都合）</option>
                         </select>
                         <input type="text" placeholder="コメント（例: 10時遅刻）" 
+                               id="comment-${dateStr}-${childName}"
                                value="${currentComment}"
-                               oninput="saveAttendanceComment('${dateStr}', '${childName}', this.value)"
                                style="width:100%; margin-top:0.3rem; padding:0.4rem; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; box-sizing:border-box; font-size:0.85rem;">
                     </div>
                 `;
@@ -684,6 +680,11 @@
         `;
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
+        
+        // モーダルの下部にある「登録」ボタンをここで動的に生成（ボタンを押すと一括保存して閉じる）
+        const footerBtnContainer = document.getElementById('modal-footer-btn-container');
+        footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
+
         modal.style.display = 'flex';
     }
 
@@ -696,9 +697,40 @@
 
     function closeModal() {
         document.getElementById('day-modal').style.display = 'none';
-        // 閉じたタイミングでクラウドから最新データを再取得して画面をピタッと同期させる
         loadDataFromCloud(true);
         renderCalendar();
+    }
+
+    // 「登録」ボタンを押したときに、出欠状況とコメントをまとめて正確に上書き保存する関数
+    function saveAllModalData(dateStr) {
+        let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
+        if (myFamily && myFamily.children) {
+            myFamily.children.forEach(childName => {
+                const statusEl = document.getElementById(`status-${dateStr}-${childName}`);
+                const commentEl = document.getElementById(`comment-${dateStr}-${childName}`);
+                
+                if (statusEl && commentEl) {
+                    let statusVal = statusEl.value;
+                    let commentVal = commentEl.value;
+
+                    if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
+                    if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = {};
+                    
+                    attendanceData[dateStr][childName].status = statusVal;
+                    attendanceData[dateStr][childName].comment = commentVal;
+                    
+                    sendToGAS({
+                        action: 'saveAttendance',
+                        date: dateStr,
+                        childName: childName,
+                        status: statusVal,
+                        comment: commentVal
+                    });
+                }
+            });
+        }
+        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
+        closeModal();
     }
 
     function updatePracticeStatus(dateStr) {
@@ -757,7 +789,8 @@
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
     }
-function removePractice(dateStr) {
+
+    function removePractice(dateStr) {
         delete practiceData[dateStr];
         
         const url = GAS_URL + "?action=deletePractice&date=" + encodeURIComponent(dateStr);
@@ -767,38 +800,6 @@ function removePractice(dateStr) {
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
-    }
-
-    function saveAttendance(dateStr, childName, status) {
-        if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-        if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = {};
-        attendanceData[dateStr][childName].status = status;
-        
-        let commentVal = attendanceData[dateStr][childName].comment || '';
-        sendToGAS({
-            action: 'saveAttendance',
-            date: dateStr,
-            childName: childName,
-            status: status,
-            comment: commentVal
-        });
-        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
-    }
-
-    function saveAttendanceComment(dateStr, childName, commentVal) {
-        if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-        if (!attendanceData[dateStr][childName]) attendanceData[dateStr][childName] = {};
-        attendanceData[dateStr][childName].comment = commentVal;
-        
-        let currentStatus = attendanceData[dateStr][childName].status || '参加';
-        sendToGAS({
-            action: 'saveAttendance',
-            date: dateStr,
-            childName: childName,
-            status: currentStatus,
-            comment: commentVal
-        });
-        localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
     }
 
     function renderMasterTable() {
@@ -819,7 +820,7 @@ function removePractice(dateStr) {
         });
     }
 
-        function saveMasterItem() {
+    function saveMasterItem() {
         const editId = document.getElementById('edit-id').value;
         const c1 = document.getElementById('child-1').value.trim();
         const c2 = document.getElementById('child-2').value.trim();
@@ -843,7 +844,6 @@ function removePractice(dateStr) {
             masterData.push({ id: targetId, children: childrenArr, skipDuty: skipDuty });
         }
 
-        // GASへ送信してスプレッドシート（masterシート）に保存
         const url = GAS_URL + "?action=saveMaster" +
                     "&editId=" + encodeURIComponent(targetId) +
                     "&child1=" + encodeURIComponent(c1) +
@@ -859,7 +859,6 @@ function removePractice(dateStr) {
         saveDataToCloud();
         localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
-
 
     function editMasterItem(id) {
         let item = masterData.find(m => m.id == id);
@@ -885,12 +884,11 @@ function removePractice(dateStr) {
         document.getElementById('cancel-btn').style.display = 'none';
     }
 
-        function deleteMasterItem(id) {
+  function deleteMasterItem(id) {
         if (!confirm('このメンバー（世帯）を削除してもよろしいですか？')) return;
 
         masterData = masterData.filter(item => item.id != id);
         
-        // スプレッドシート（masterシート）から削除する通信を送信
         const url = GAS_URL + "?action=deleteMaster&editId=" + encodeURIComponent(id);
         const img = new Image();
         img.src = url;
@@ -967,7 +965,7 @@ function removePractice(dateStr) {
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
-        // LINE用に当番テキストを生成してクリップボードにコピーする関数
+
     function copyDutyTextForLine() {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
@@ -1000,32 +998,30 @@ function removePractice(dateStr) {
 
         text += `※練習時間はアプリでご確認ください\n`;
 
-               // クリップボードへコピー
         navigator.clipboard.writeText(text).then(() => {
-            // ボタンを一時的に「コピー完了！」に変える演出
             const btn = document.querySelector('button[onclick="copyDutyTextForLine()"]');
             if (btn) {
                 const originalText = btn.innerHTML;
                 const originalBg = btn.style.backgroundColor;
                 
                 btn.innerHTML = '✨ コピー完了しました！';
-                btn.style.backgroundColor = '#2563eb'; // 青色に変化
+                btn.style.backgroundColor = '#2563eb';
                 
                 setTimeout(() => {
                     btn.innerHTML = originalText;
                     btn.style.backgroundColor = originalBg;
-                }, 2000); // 2秒後に元の緑色のボタンに戻す
+                }, 2000);
             }
         }).catch(err => {
             alert('コピーに失敗しました...');
         });
-    }    // 個別の練習日追加お知らせ用テキストをコピーする関数
+    }
+
     function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
 
-        // 日付と曜日のフォーマット（例: 10月25日(日)）
         const parts = dateStr.split('-');
         const month = parseInt(parts[1], 10);
         const day = parseInt(parts[2], 10);
@@ -1041,7 +1037,7 @@ function removePractice(dateStr) {
             text += `📌 備考: ${memo}\n`;
         }
 
-                navigator.clipboard.writeText(text).then(() => {
+        navigator.clipboard.writeText(text).then(() => {
             const btn = event.target;
             const originalText = btn.innerHTML;
             const originalBg = btn.style.backgroundColor;
@@ -1054,11 +1050,8 @@ function removePractice(dateStr) {
                 btn.style.backgroundColor = originalBg;
             }, 2000);
         }).catch(err => {
-            // 実際にはコピーできていることが多いので、エラー表示は出さないようにする
         });
     }
-
-
 </script>
 </body>
 </html>
