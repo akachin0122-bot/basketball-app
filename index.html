@@ -178,12 +178,11 @@
             <button onclick="closeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; font-weight: bold; cursor: pointer; padding: 0 0.3rem;">✕</button>
         </div>
         <div class="modal-tabs" id="modal-tabs-header">
-            <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
-            <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
+            <!-- 練習日に応じて動的に切り替わります -->
         </div>
         <div id="modal-content"></div>
         <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container">
-            <!-- 登録ボタンは openDayModal 内で動的に生成・制御します -->
+            <!-- 登録ボタン -->
         </div>
     </div>
 </div>
@@ -212,7 +211,8 @@
             loadDataFromCloud(true);
         }
     });
-function checkPassword() {
+
+    function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -243,8 +243,7 @@ function checkPassword() {
         }
         return str;
     }
-
-    function parseMasterData(rawMaster) {
+function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -432,7 +431,8 @@ function checkPassword() {
             renderCalendar();
         }
     }
-function getDutyMapForYearMonth(y, m) {
+
+    function getDutyMapForYearMonth(y, m) {
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
             return cleanD && cleanD.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
@@ -532,8 +532,7 @@ function getDutyMapForYearMonth(y, m) {
             grid.appendChild(cell);
         }
     }
-
-    function renderDutyList() {
+function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
@@ -605,64 +604,6 @@ function getDutyMapForYearMonth(y, m) {
         let currentDuty = dutyMap[dateStr] || pData.duty || "";
 
         const contentDiv = document.getElementById('modal-content');
-
-        let dutyOptions = '<option value="">（未設定）</option>';
-        masterData.forEach(family => {
-            if (!family.children || !family.children[0]) return;
-            if (family.skipDuty) return;
-
-            let familyName = family.children[0] + "家";
-            let selected = (currentDuty === familyName) ? 'selected' : '';
-            dutyOptions += `<option value="${familyName}" ${selected}>${familyName}</option>`;
-        });
-
-        let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
-
-        let attendanceHtml = `
-            <div class="modal-tab-content active" id="tab-attendance">
-                <p style="font-size: 0.85rem; color: #94a3b8;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
-        `;
-        if (myFamily && myFamily.children) {
-            attendanceHtml += `<div style="background:#1e293b; padding:0.75rem; border-radius:6px; border:1px solid var(--border);">`;
-            myFamily.children.forEach(childName => {
-                if (!attendanceData[dateStr]) attendanceData[dateStr] = {};
-                let record = attendanceData[dateStr][childName];
-                let currentStatus = typeof record === 'object' && record !== null ? (record.status || '参加') : (record || '参加');
-                let currentComment = typeof record === 'object' && record !== null ? (record.comment || '') : '';
-
-                attendanceHtml += `
-                    <div style="margin-bottom: 0.75rem;">
-                        <strong style="color:white;">${childName}</strong><br>
-                        <select id="status-${dateStr}-${childName}" style="margin-top: 4px; width: 100%;">
-                            <option value="参加" ${currentStatus === '参加' ? 'selected' : ''}>参加</option>
-                            <option value="遅刻" ${currentStatus === '遅刻' ? 'selected' : ''}>遅刻</option>
-                            <option value="欠席(病気)" ${currentStatus === '欠席(病気)' ? 'selected' : ''}>欠席（病気）</option>
-                            <option value="欠席(家庭都合)" ${currentStatus === '欠席(家庭都合)' ? 'selected' : ''}>欠席（家庭都合）</option>
-                        </select>
-                        <input type="text" placeholder="コメント（例: 10時遅刻）" 
-                               id="comment-${dateStr}-${childName}"
-                               value="${currentComment}"
-                               style="width:100%; margin-top:0.3rem; padding:0.4rem; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; box-sizing:border-box; font-size:0.85rem;">
-                    </div>
-                `;
-            });
-            attendanceHtml += `</div>`;
-        }
-        attendanceHtml += `</div>`;
-
-        let isPracChecked = pData.isPractice ? 'checked' : '';
-        let settingsHtml = `
-            <div class="modal-tab-content" id="tab-settings">
-                <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>この日を練習日にする</strong></label>
-    function openDayModal(dateStr) {
-        const modal = document.getElementById('day-modal');
-        document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
-        let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
-        let dutyMap = getDutyMapForYearMonth(parseInt(dateStr.split('-')[0]), parseInt(dateStr.split('-')[1]) - 1);
-        let currentDuty = dutyMap[dateStr] || pData.duty || "";
-
-        const contentDiv = document.getElementById('modal-content');
         const tabsHeader = document.getElementById('modal-tabs-header');
 
         let dutyOptions = '<option value="">（未設定）</option>';
@@ -677,7 +618,6 @@ function getDutyMapForYearMonth(y, m) {
 
         let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
 
-        // --- 出欠HTML ---
         let attendanceHtml = `
             <div class="modal-tab-content ${pData.isPractice ? 'active' : ''}" id="tab-attendance">
                 <p style="font-size: 0.85rem; color: #94a3b8;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
@@ -710,7 +650,6 @@ function getDutyMapForYearMonth(y, m) {
         }
         attendanceHtml += `</div>`;
 
-        // --- 練習・当番設定HTML ---
         let isPracChecked = pData.isPractice ? 'checked' : '';
         let settingsHtml = `
             <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
@@ -739,7 +678,6 @@ function getDutyMapForYearMonth(y, m) {
             </div>
         `;
 
-        // 💡 練習日かどうかでタブヘッダーの表示切り替えと表示コンテンツの調整
         if (pData.isPractice) {
             tabsHeader.style.display = 'flex';
             tabsHeader.innerHTML = `
@@ -748,19 +686,17 @@ function getDutyMapForYearMonth(y, m) {
             `;
             contentDiv.innerHTML = attendanceHtml + settingsHtml;
         } else {
-            // 練習日ではない場合はタブを隠して設定画面のみ表示
             tabsHeader.style.display = 'none';
             contentDiv.innerHTML = settingsHtml;
         }
 
-        // 下部ボタンの設定
         const footerBtnContainer = document.getElementById('modal-footer-btn-container');
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
     }
 
-function switchModalTab(tabName, event) {
+    function switchModalTab(tabName, event) {
         document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
@@ -773,7 +709,6 @@ function switchModalTab(tabName, event) {
         renderCalendar();
     }
 
-    // 「登録」ボタンを押したときに、出欠ステータスとコメントを確実に上書き保存する関数
     function saveAllModalData(dateStr) {
         let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
         if (myFamily && myFamily.children) {
@@ -833,8 +768,7 @@ function switchModalTab(tabName, event) {
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
     }
-
-    function updatePracticeInfo(dateStr) {
+function updatePracticeInfo(dateStr) {
         const start = document.getElementById('modal-start').value;
         const end = document.getElementById('modal-end').value;
         const memo = document.getElementById('modal-memo').value;
