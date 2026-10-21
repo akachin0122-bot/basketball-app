@@ -42,6 +42,7 @@
         .calendar-cell.my-duty { background-color: #1e3a8a; border: 2px solid #3b82f6; } 
         .calendar-cell.today-cell { border: 2px dashed #facc15 !important; }
         .calendar-cell .date-num { font-weight: bold; font-size: 0.9rem; color: #f1f5f9; }
+        .calendar-cell .fee-badge { font-size: 0.85rem; }
         
         .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
         .practice-dot { display: inline-block; color: #94a3b8; font-size: 1.3rem; font-weight: bold; line-height: 1; }
@@ -120,7 +121,7 @@
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
         <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や練習・当番の設定・編集ができます。</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や設定ができます。（⭐️は月謝日です）</p>
             <button class="btn btn-warning" onclick="bulkAddTueWedFri()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">火水金一括登録</button>
         </div>
     </div> 
@@ -177,13 +178,9 @@
             <h3 id="modal-date-title" style="margin:0; color:#f8fafc;">日付</h3>
             <button onclick="closeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; font-weight: bold; cursor: pointer; padding: 0 0.3rem;">✕</button>
         </div>
-        <div class="modal-tabs" id="modal-tabs-header">
-            <!-- 練習日に応じて動的に切り替わります -->
-        </div>
+        <div class="modal-tabs" id="modal-tabs-header"></div>
         <div id="modal-content"></div>
-        <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container">
-            <!-- 登録ボタン -->
-        </div>
+        <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container"></div>
     </div>
 </div>
 
@@ -243,7 +240,8 @@
         }
         return str;
     }
-function parseMasterData(rawMaster) {
+
+    function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -268,8 +266,7 @@ function parseMasterData(rawMaster) {
             localStorage.setItem('cache_master', JSON.stringify(masterData));
         }
     }
-
-    function loadDataFromCloud(isBackground = false) {
+function loadDataFromCloud(isBackground = false) {
         const statusEl = document.getElementById('sync-status');
         if(statusEl && !isBackground) statusEl.textContent = "（同期中...）";
         
@@ -288,7 +285,8 @@ function parseMasterData(rawMaster) {
                         let cleanDate = cleanDateStr(p.date);
                         if (cleanDate) {
                             newPractices[cleanDate] = { 
-                                isPractice: true, 
+                                isPractice: (p.isPractice === true || String(p.isPractice).toUpperCase() === "TRUE" || p.isPractice === undefined), 
+                                isFeeDay: (p.isFeeDay === true || String(p.isFeeDay).toUpperCase() === "TRUE"),
                                 startTime: p.startTime || "19:00", 
                                 endTime: p.endTime || "21:00", 
                                 memo: p.memo || "",
@@ -334,6 +332,7 @@ function parseMasterData(rawMaster) {
                     "&endTime=" + encodeURIComponent(payload.endTime || '21:00') +
                     "&memo=" + encodeURIComponent(payload.memo || '') +
                     "&isPractice=" + encodeURIComponent(payload.isPractice !== false) +
+                    "&isFeeDay=" + encodeURIComponent(payload.isFeeDay === true) +
                     "&childName=" + encodeURIComponent(payload.childName || '') + 
                     "&status=" + encodeURIComponent(payload.status || '') + 
                     "&comment=" + encodeURIComponent(payload.comment || '');
@@ -370,7 +369,7 @@ function parseMasterData(rawMaster) {
                 let dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
                 if (!practiceData[dateStr]) {
-                    practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
+                    practiceData[dateStr] = { isPractice: true, isFeeDay: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
                 } else {
                     practiceData[dateStr].isPractice = true;
                 }
@@ -383,7 +382,8 @@ function parseMasterData(rawMaster) {
                     startTime: p.startTime || "19:00",
                     endTime: p.endTime || "21:00",
                     memo: p.memo || "",
-                    isPractice: true
+                    isPractice: true,
+                    isFeeDay: p.isFeeDay === true
                 });
                 addedCount++;
             }
@@ -513,18 +513,27 @@ function parseMasterData(rawMaster) {
                 cell.classList.add('today-cell');
             }
 
-            let html = `<div class="date-num">${day}</div>`;
+            let pInfo = practiceData[dateStr];
+            let feeBadge = (pInfo && pInfo.isFeeDay) ? `<span class="fee-badge">⭐️</span>` : ``;
+
+            let html = `<div style="display:flex; justify-content:space-between; align-items:center;"><span class="date-num">${day}</span>${feeBadge}</div>`;
             
-            if (practiceData[dateStr] && practiceData[dateStr].isPractice) {
+            if (pInfo && pInfo.isPractice) {
                 cell.classList.add('practice');
                 let assignedDuty = dutyMap[dateStr] || "";
                 
                 let isMyDuty = (myFamilyName && assignedDuty === myFamilyName);
                 if (isMyDuty) {
                     cell.classList.add('my-duty');
-                    html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
-                } else {
-                    html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
+                }
+                
+                // 月謝日でない場合のみ ● ドットを表示する
+                if (!pInfo.isFeeDay) {
+                    if (isMyDuty) {
+                        html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
+                    } else {
+                        html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
+                    }
                 }
             }
             cell.innerHTML = html;
@@ -586,7 +595,8 @@ function renderDutyList() {
             startTime: p.startTime || "19:00",
             endTime: p.endTime || "21:00",
             memo: p.memo || "",
-            isPractice: true
+            isPractice: true,
+            isFeeDay: p.isFeeDay === true
         });
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         
@@ -599,7 +609,7 @@ function renderDutyList() {
     function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
-        let pData = practiceData[dateStr] || { isPractice: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
+        let pData = practiceData[dateStr] || { isPractice: false, isFeeDay: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
         let dutyMap = getDutyMapForYearMonth(parseInt(dateStr.split('-')[0]), parseInt(dateStr.split('-')[1]) - 1);
         let currentDuty = dutyMap[dateStr] || pData.duty || "";
 
@@ -651,10 +661,12 @@ function renderDutyList() {
         attendanceHtml += `</div>`;
 
         let isPracChecked = pData.isPractice ? 'checked' : '';
+        let isFeeChecked = pData.isFeeDay ? 'checked' : '';
         let settingsHtml = `
             <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
-                <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white;">
+                <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                     <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>この日を練習日にする</strong></label>
+                    <label style="cursor:pointer; font-weight:bold; color:#fde047;"><input type="checkbox" id="modal-is-fee" ${isFeeChecked} onchange="updatePracticeInfo('${dateStr}')"> ⭐️ 月謝日</label>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
                     <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
@@ -742,8 +754,10 @@ function renderDutyList() {
 
     function updatePracticeStatus(dateStr) {
         const isChecked = document.getElementById('modal-is-practice').checked;
+        const isFeeChecked = document.getElementById('modal-is-fee') ? document.getElementById('modal-is-fee').checked : false;
+
         if (!practiceData[dateStr]) {
-            practiceData[dateStr] = { isPractice: true, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
+            practiceData[dateStr] = { isPractice: true, isFeeDay: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
         }
         practiceData[dateStr].isPractice = isChecked;
         
@@ -756,7 +770,8 @@ function renderDutyList() {
                 startTime: p.startTime || "19:00",
                 endTime: p.endTime || "21:00",
                 memo: p.memo || "",
-                isPractice: true
+                isPractice: true,
+                isFeeDay: isFeeChecked
             });
         } else {
             delete practiceData[dateStr];
@@ -768,11 +783,13 @@ function renderDutyList() {
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
     }
-function updatePracticeInfo(dateStr) {
+
+    function updatePracticeInfo(dateStr) {
         const start = document.getElementById('modal-start').value;
         const end = document.getElementById('modal-end').value;
         const memo = document.getElementById('modal-memo').value;
         const duty = document.getElementById('modal-duty').value;
+        const isFee = document.getElementById('modal-is-fee').checked;
 
         if (!practiceData[dateStr]) {
             practiceData[dateStr] = { isPractice: true };
@@ -782,6 +799,7 @@ function updatePracticeInfo(dateStr) {
         practiceData[dateStr].memo = memo;
         practiceData[dateStr].duty = duty;
         practiceData[dateStr].isPractice = true;
+        practiceData[dateStr].isFeeDay = isFee;
 
         sendToGAS({
             action: 'saveDuty',
@@ -790,10 +808,12 @@ function updatePracticeInfo(dateStr) {
             startTime: start,
             endTime: end,
             memo: memo,
-            isPractice: true
+            isPractice: true,
+            isFeeDay: isFee
         });
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
+        renderCalendar();
     }
 
     function removePractice(dateStr) {
@@ -807,8 +827,7 @@ function updatePracticeInfo(dateStr) {
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
     }
-
-    function renderMasterTable() {
+function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
@@ -1022,7 +1041,8 @@ function updatePracticeInfo(dateStr) {
             alert('コピーに失敗しました...');
         });
     }
-function copySinglePracticeNotice(dateStr) {
+
+    function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
