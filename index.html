@@ -240,8 +240,7 @@
         }
         return str;
     }
-
-    function parseMasterData(rawMaster) {
+function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -266,7 +265,8 @@
             localStorage.setItem('cache_master', JSON.stringify(masterData));
         }
     }
-function loadDataFromCloud(isBackground = false) {
+
+    function loadDataFromCloud(isBackground = false) {
         const statusEl = document.getElementById('sync-status');
         if(statusEl && !isBackground) statusEl.textContent = "（同期中...）";
         
@@ -527,13 +527,11 @@ function loadDataFromCloud(isBackground = false) {
                     cell.classList.add('my-duty');
                 }
                 
-                // 月謝日でない場合のみ ● ドットを表示する
-                if (!pInfo.isFeeDay) {
-                    if (isMyDuty) {
-                        html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
-                    } else {
-                        html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
-                    }
+                // 月謝日であっても通常通り ● ドットを表示する
+                if (isMyDuty) {
+                    html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
+                } else {
+                    html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
                 }
             }
             cell.innerHTML = html;
@@ -814,8 +812,7 @@ function renderDutyList() {
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
-    }
-
+        }
     function removePractice(dateStr) {
         delete practiceData[dateStr];
         
@@ -827,7 +824,8 @@ function renderDutyList() {
         document.getElementById('day-modal').style.display = 'none';
         renderCalendar();
     }
-function renderMasterTable() {
+
+    function renderMasterTable() {
         const tbody = document.getElementById('master-tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
@@ -1041,8 +1039,7 @@ function renderMasterTable() {
             alert('コピーに失敗しました...');
         });
     }
-
-    function copySinglePracticeNotice(dateStr) {
+function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
