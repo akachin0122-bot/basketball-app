@@ -62,11 +62,6 @@
         .summary-box { display: flex; gap: 1rem; background: #1e293b !important; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: bold; border: 1px solid var(--border); }
         select, input, textarea { padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-size: 0.9rem; font-family: inherit; background: #1e293b; color: white; }
         
-        .modal-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
-        .modal-tab-btn { flex: 1; padding: 0.5rem; background: none; border: none; font-weight: bold; cursor: pointer; color: #94a3b8; text-align: center; }
-        .modal-tab-btn.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; margin-bottom: -2px; }
-        .modal-tab-content { display: none; }
-        .modal-tab-content.active { display: block; }
         #sync-status { font-size: 0.75rem; color: #93c5fd; margin-left: 0.5rem; }
 
         #auth-overlay {
@@ -173,14 +168,16 @@
     </div>
 </div>
 
-<div id="day-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:9999;">
+<!-- モーダルウィンドウ（背景クリックで閉じる機能付き） -->
+<div id="day-modal" onclick="if(event.target === this) closeModal();" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:9999;">
     <div style="background: #0f172a; padding:1.5rem; border-radius:8px; width:90%; max-width:440px; max-height:85vh; overflow-y:auto; border: 1px solid var(--border);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <h3 id="modal-date-title" style="margin:0; color:#f8fafc;">日付</h3>
-            <button onclick="closeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; font-weight: bold; cursor: pointer; padding: 0 0.3rem;">✕</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+            <h3 id="modal-date-title" style="margin:0; color:#f8fafc; font-size: 1.1rem;">日付</h3>
+            <button onclick="closeModal()" style="background: #334155; border: none; color: #f8fafc; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
-        <div class="modal-tabs" id="modal-tabs-header"></div>
+        
         <div id="modal-content"></div>
+        
         <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container"></div>
     </div>
 </div>
@@ -241,7 +238,7 @@
         }
         return str;
     }
-    function parseMasterData(rawMaster) {
+   function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -266,7 +263,8 @@
             localStorage.setItem('cache_master', JSON.stringify(masterData));
         }
     }
-function loadDataFromCloud(isBackground = false) {
+
+    function loadDataFromCloud(isBackground = false) {
         const statusEl = document.getElementById('sync-status');
         if(statusEl && !isBackground) statusEl.textContent = "（同期中...）";
         
@@ -479,8 +477,7 @@ function loadDataFromCloud(isBackground = false) {
         else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
         renderDutyList();
     }
-
-    function renderCalendar() {
+function renderCalendar() {
         updateGlobalFamilySelect();
         document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
         const grid = document.getElementById('calendar-grid');
@@ -542,7 +539,8 @@ function loadDataFromCloud(isBackground = false) {
             grid.appendChild(cell);
         }
     }
-function renderDutyList() {
+
+    function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
@@ -611,13 +609,12 @@ function renderDutyList() {
 
     function openDayModal(dateStr) {
         const modal = document.getElementById('day-modal');
-        document.getElementById('modal-date-title').textContent = `${dateStr} の設定`;
+        document.getElementById('modal-date-title').textContent = `${dateStr} の予定`;
         let pData = practiceData[dateStr] || { isPractice: false, isFeeDay: false, startTime: "19:00", endTime: "21:00", memo: "", duty: "" };
         let dutyMap = getDutyMapForYearMonth(parseInt(dateStr.split('-')[0]), parseInt(dateStr.split('-')[1]) - 1);
         let currentDuty = dutyMap[dateStr] || pData.duty || "";
 
         const contentDiv = document.getElementById('modal-content');
-        const tabsHeader = document.getElementById('modal-tabs-header');
 
         let dutyOptions = '<option value="">（未設定）</option>';
         masterData.forEach(family => {
@@ -634,8 +631,9 @@ function renderDutyList() {
         let timeText = `${pData.startTime || '19:00'} 〜 ${pData.endTime || '21:00'}`;
         let memoText = (pData.memo && pData.memo.trim()) ? pData.memo.trim() : "（特に連絡事項はありません）";
 
+        // メイン画面（出欠＆本日の連絡）
         let attendanceHtml = `
-            <div class="modal-tab-content ${pData.isPractice ? 'active' : ''}" id="tab-attendance">
+            <div id="modal-view-attendance">
                 <p style="font-size: 0.85rem; color: #94a3b8; margin-top:0;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
         `;
 
@@ -667,7 +665,7 @@ function renderDutyList() {
         }
 
         attendanceHtml += `
-            <div style="background: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px dashed #3b82f6;">
+            <div style="background: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px dashed #3b82f6; margin-bottom: 1rem;">
                 <label style="color: #60a5fa; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 0.2rem;">
                     ⏰ 時間: <span id="attendance-time-display">${timeText}</span>
                 </label>
@@ -676,10 +674,16 @@ function renderDutyList() {
                 </label>
                 <div id="attendance-memo-display" style="font-size: 0.85rem; color: #f8fafc; white-space: pre-wrap; line-height: 1.4;">${memoText}</div>
             </div>
-        `;
-        attendanceHtml += `</div>`;
+            
+            <!-- 管理者向け設定への切り替えボタン -->
+            <div style="text-align: center; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
+                <button onclick="toggleAdminSettings(true)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    ⚙️ 予定・当番設定を開く（管理者向け）
+                </button>
+            </div>
+        </div>`;
 
-        let isPracChecked = pData.isPractice ? 'checked' : '';
+    let isPracChecked = pData.isPractice ? 'checked' : '';
         let isFeeChecked = pData.isFeeDay ? 'checked' : '';
         let isGameChecked = (pData.memo && (pData.memo.includes('【試合】') || pData.memo.includes('試合'))) ? 'checked' : '';
 
@@ -693,8 +697,9 @@ function renderDutyList() {
             </div>
         `;
 
+        // 管理者向け設定画面（普段は隠れています）
         let settingsHtml = `
-            <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
+            <div id="modal-view-settings" style="display: none;">
                 <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                     <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>予定あり</strong></label>
                     <label style="cursor:pointer; font-weight:bold; color:#60a5fa;"><input type="checkbox" id="modal-is-game" ${isGameChecked} onchange="toggleGameTag('${dateStr}')"> 🏀 試合・大会</label>
@@ -707,34 +712,42 @@ function renderDutyList() {
                     <input type="time" id="modal-end" value="${pData.endTime || '21:00'}" onchange="updatePracticeInfo('${dateStr}')">
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.3rem;">
-                        <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label>
-                    </div>
+                    <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label>
                     <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%; box-sizing:border-box;">${pData.memo || ''}</textarea>
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <button class="btn" onclick="copySinglePracticeNotice('${dateStr}')" style="background-color: #22c55e; width: 100%; padding: 0.5rem;" id="copy-notice-btn">📢 LINE用お知らせをコピー</button>
                 </div>
                 <button class="btn btn-danger" onclick="removePractice('${dateStr}')" style="width: 100%;">この日の予定を完全に消去</button>
+                
+                <div style="text-align: center; margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">
+                    <button onclick="toggleAdminSettings(false)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                        ◀️ 出欠画面に戻る
+                    </button>
+                </div>
             </div>
         `;
 
-        if (pData.isPractice) {
-            tabsHeader.style.display = 'flex';
-            tabsHeader.innerHTML = `
-                <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
-                <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 予定・当番設定</button>
-            `;
-            contentDiv.innerHTML = attendanceHtml + settingsHtml;
-        } else {
-            tabsHeader.style.display = 'none';
-            contentDiv.innerHTML = settingsHtml;
-        }
+        contentDiv.innerHTML = attendanceHtml + settingsHtml;
 
         const footerBtnContainer = document.getElementById('modal-footer-btn-container');
-        footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
+        footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')" style="width: 100%;">登録する</button>`;
 
         modal.style.display = 'flex';
+    }
+
+    function toggleAdminSettings(showAdmin) {
+        const attView = document.getElementById('modal-view-attendance');
+        const setView = document.getElementById('modal-view-settings');
+        if (attView && setView) {
+            if (showAdmin) {
+                attView.style.display = 'none';
+                setView.style.display = 'block';
+            } else {
+                attView.style.display = 'block';
+                setView.style.display = 'none';
+            }
+        }
     }
 
     function toggleGameTag(dateStr) {
@@ -800,12 +813,6 @@ function renderDutyList() {
         }).catch(err => {
             alert('コピーに失敗しました...');
         });
-    }
-function switchModalTab(tabName, event) {
-        document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById(tabName === 'attendance' ? 'tab-attendance' : 'tab-settings').classList.add('active');
     }
 
     function closeModal() {
@@ -919,8 +926,9 @@ function switchModalTab(tabName, event) {
             memoDisplay.textContent = memo.trim() ? memo.trim() : "（特に連絡事項はありません）";
         }
     }
-
-    function removePractice(dateStr) {
+function removePractice(dateStr) {
+        if (!confirm('本当にこの日の予定を完全に消去しますか？')) return;
+        
         delete practiceData[dateStr];
         
         const url = GAS_URL + "?action=deletePractice&date=" + encodeURIComponent(dateStr);
@@ -1064,7 +1072,8 @@ function switchModalTab(tabName, event) {
         });
         renderAttendanceList();
     }
-function renderAttendanceList() {
+
+    function renderAttendanceList() {
         const select = document.getElementById('attendance-date-select');
         const container = document.getElementById('attendance-list-container');
         const summaryBox = document.getElementById('attendance-summary');
