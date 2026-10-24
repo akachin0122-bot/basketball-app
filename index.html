@@ -210,7 +210,7 @@
         }
     });
 
-    function checkPassword() {
+  function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -230,7 +230,8 @@
     let currentMonth = _todayInit.getMonth(); 
     let dutyYear = _todayInit.getFullYear();
     let dutyMonth = _todayInit.getMonth();
-function cleanDateStr(rawDate) {
+
+    function cleanDateStr(rawDate) {
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
@@ -423,8 +424,7 @@ function cleanDateStr(rawDate) {
             select.value = myFamilyId;
         }
     }
-
-    function changeMyFamily() {
+function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -456,7 +456,8 @@ function cleanDateStr(rawDate) {
         else if (viewName === 'attendance') updateAttendanceSelect();
         else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
     }
-function changeMonth(direction) {
+
+    function changeMonth(direction) {
         let nextMonth = currentMonth + direction;
         let nextYear = currentYear;
         if (nextMonth > 11) { nextMonth = 0; nextYear++; }
@@ -694,7 +695,6 @@ function changeMonth(direction) {
                 <div style="margin-bottom: 0.75rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.3rem;">
                         <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label>
-                        <button type="button" class="btn btn-secondary" onclick="insertGameTemplate('${dateStr}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">⚔️ 試合テンプレ挿入</button>
                     </div>
                     <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%; box-sizing:border-box;">${pData.memo || ''}</textarea>
                 </div>
@@ -704,7 +704,8 @@ function changeMonth(direction) {
                 <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の予定を完全に消去</button>
             </div>
         `;
-if (pData.isPractice) {
+
+        if (pData.isPractice) {
             tabsHeader.style.display = 'flex';
             tabsHeader.innerHTML = `
                 <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
@@ -715,8 +716,7 @@ if (pData.isPractice) {
             tabsHeader.style.display = 'none';
             contentDiv.innerHTML = settingsHtml;
         }
-
-        const footerBtnContainer = document.getElementById('modal-footer-btn-container');
+const footerBtnContainer = document.getElementById('modal-footer-btn-container');
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
@@ -728,32 +728,21 @@ if (pData.isPractice) {
         const dutyContainer = document.getElementById('modal-duty-container');
         let currentMemo = memoEl.value;
 
+        const template = `【試合】\n📍 会場：\n⏰ 集合時間：\n🚗 配車・駐車場：\n🎒 持ち物：ユニフォーム（濃・淡）、昼食、飲み物\n📌 その他ルール：`;
+
         if (isGameChecked) {
+            // チェックON時：まだ【試合】が入っていなければ自動でテンプレ挿入
             if (!currentMemo.includes('【試合】')) {
-                memoEl.value = '【試合】\n' + currentMemo;
+                memoEl.value = currentMemo.trim() ? `${template}\n\n${currentMemo}` : template;
             }
             if (dutyContainer) dutyContainer.style.display = 'none';
         } else {
-            memoEl.value = currentMemo.replace(/【試合】\n?|【試合】/g, '');
+            // チェックOFF時：テンプレや【試合】タグを自動除去
+            memoEl.value = currentMemo
+                .replace(template + '\n\n', '')
+                .replace(template, '')
+                .replace(/【試合】\n?|【試合】/g, '');
             if (dutyContainer) dutyContainer.style.display = 'block';
-        }
-        updatePracticeInfo(dateStr);
-    }
-
-    function insertGameTemplate(dateStr) {
-        const memoEl = document.getElementById('modal-memo');
-        const gameCheckbox = document.getElementById('modal-is-game');
-        const dutyContainer = document.getElementById('modal-duty-container');
-        
-        if (gameCheckbox) gameCheckbox.checked = true;
-        if (dutyContainer) dutyContainer.style.display = 'none';
-
-        let template = `【試合】\n📍 会場：\n⏰ 集合時間：\n🚗 配車・駐車場：\n🎒 持ち物：ユニフォーム（濃・淡）、昼食、飲み物\n📌 その他ルール：`;
-        
-        if (!memoEl.value.trim()) {
-            memoEl.value = template;
-        } else if (!memoEl.value.includes('【試合】')) {
-            memoEl.value = template + '\n\n' + memoEl.value;
         }
         updatePracticeInfo(dateStr);
     }
@@ -936,7 +925,8 @@ if (pData.isPractice) {
         saveDataToCloud();
         localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
-function editMasterItem(id) {
+
+    function editMasterItem(id) {
         let item = masterData.find(m => m.id == id);
         if (!item) return;
         document.getElementById('edit-id').value = item.id;
@@ -959,8 +949,7 @@ function editMasterItem(id) {
         document.getElementById('save-btn').textContent = '追加する';
         document.getElementById('cancel-btn').style.display = 'none';
     }
-
-    function deleteMasterItem(id) {
+function deleteMasterItem(id) {
         if (!confirm('このメンバー（世帯）を削除してもよろしいですか？')) return;
 
         masterData = masterData.filter(item => item.id != id);
