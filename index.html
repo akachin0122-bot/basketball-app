@@ -209,8 +209,7 @@
             loadDataFromCloud(true);
         }
     });
-
-  function checkPassword() {
+function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -424,7 +423,8 @@
             select.value = myFamilyId;
         }
     }
-function changeMyFamily() {
+
+    function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -445,7 +445,6 @@ function changeMyFamily() {
         });
         return dutyMap;
     }
-
     function switchView(viewName, event) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
@@ -633,10 +632,23 @@ function changeMyFamily() {
 
         let myFamily = masterData.find(item => Number(item.id) === Number(myFamilyId)) || masterData[0];
 
+        // 備考（連絡事項・会場）の取得
+        let memoText = (pData.memo && pData.memo.trim()) ? pData.memo.trim() : "（特に連絡事項はありません）";
+
         let attendanceHtml = `
             <div class="modal-tab-content ${pData.isPractice ? 'active' : ''}" id="tab-attendance">
-                <p style="font-size: 0.85rem; color: #94a3b8;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
+                
+                <!-- 📍 本日の連絡・備考（会場など）表示エリア -->
+                <div style="background: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px dashed #3b82f6; margin-bottom: 1rem;">
+                    <label style="color: #60a5fa; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 0.3rem;">
+                        📍 本日の連絡・備考（会場など）:
+                    </label>
+                    <div id="attendance-memo-display" style="font-size: 0.85rem; color: #f8fafc; white-space: pre-wrap; line-height: 1.4;">${memoText}</div>
+                </div>
+
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0;"><strong>${myFamily && myFamily.children ? myFamily.children[0] : ''}家</strong> のお子さんの出欠状況</p>
         `;
+
         if (myFamily && myFamily.children) {
             attendanceHtml += `<div style="background:#1e293b; padding:0.75rem; border-radius:6px; border:1px solid var(--border);">`;
             myFamily.children.forEach(childName => {
@@ -663,6 +675,14 @@ function changeMyFamily() {
             });
             attendanceHtml += `</div>`;
         }
+   // 📋 出欠タブの下の「LINE用お知らせプレビュー」
+        attendanceHtml += `
+            <div style="margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <label style="color:#94a3b8; font-size: 0.85rem; display: block; margin-bottom: 0.4rem;"><strong>📢 LINE用お知らせプレビュー:</strong></label>
+                <div id="attendance-preview-box" style="background: #0f172a; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.85rem; white-space: pre-wrap; color: #f8fafc; max-height: 150px; overflow-y: auto; margin-bottom: 0.75rem;"></div>
+                <button class="btn" onclick="copyAttendancePreviewNotice('${dateStr}')" style="background-color: #22c55e; width: 100%; padding: 0.4rem; font-size: 0.85rem;" id="copy-preview-btn">📋 このプレビューをコピー</button>
+            </div>
+        `;
         attendanceHtml += `</div>`;
 
         let isPracChecked = pData.isPractice ? 'checked' : '';
@@ -698,10 +718,7 @@ function changeMyFamily() {
                     </div>
                     <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%; box-sizing:border-box;">${pData.memo || ''}</textarea>
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <button class="btn" onclick="copySinglePracticeNotice('${dateStr}')" style="background-color: #22c55e; width: 100%; padding: 0.5rem;" id="copy-notice-btn">📢 LINE用お知らせをコピー</button>
-                </div>
-                <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の予定を完全に消去</button>
+                <button class="btn btn-danger" onclick="removePractice('${dateStr}')" style="width: 100%;">この日の予定を完全に消去</button>
             </div>
         `;
 
@@ -712,14 +729,53 @@ function changeMyFamily() {
                 <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 予定・当番設定</button>
             `;
             contentDiv.innerHTML = attendanceHtml + settingsHtml;
+            setTimeout(() => updateAttendancePreview(dateStr), 50);
         } else {
             tabsHeader.style.display = 'none';
             contentDiv.innerHTML = settingsHtml;
         }
-const footerBtnContainer = document.getElementById('modal-footer-btn-container');
+
+        const footerBtnContainer = document.getElementById('modal-footer-btn-container');
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
+    }
+
+    // プレビューおよび備考表示エリアの更新処理
+    function updateAttendancePreview(dateStr) {
+        const previewBox = document.getElementById('attendance-preview-box');
+        const memoDisplay = document.getElementById('attendance-memo-display');
+
+        const start = document.getElementById('modal-start') ? document.getElementById('modal-start').value : '19:00';
+        const end = document.getElementById('modal-end') ? document.getElementById('modal-end').value : '21:00';
+        const memo = document.getElementById('modal-memo') ? document.getElementById('modal-memo').value.trim() : '';
+
+        // わが家の出欠タブ内の備考（会場）表示をリアルタイム更新
+        if (memoDisplay) {
+            memoDisplay.textContent = memo ? memo : "（特に連絡事項はありません）";
+        }
+
+        if (!previewBox) return;
+
+        const parts = dateStr.split('-');
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        
+        const dObj = new Date(parts[0], month - 1, day);
+        const weeks = ['日', '月', '火', '水', '木', '金', '土'];
+        const weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
+
+        let isGame = memo.includes('【試合】') || memo.includes('試合');
+        let headerTitle = isGame ? '【⚔️試合のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
+
+        let text = `${headerTitle}\n\n`;
+        text += `📅 ${month}月${day}日${weekStr}\n`;
+        text += `⏰ 時間: ${start}〜${end}\n`;
+        if (memo) {
+            text += `\n${memo}\n`;
+        }
+
+        previewBox.textContent = text;
     }
 
     function toggleGameTag(dateStr) {
@@ -731,13 +787,11 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
         const template = `【試合】\n📍 会場：\n⏰ 集合時間：\n🚗 配車・駐車場：\n🎒 持ち物：ユニフォーム、昼食、飲み物\n📌 その他：`;
 
         if (isGameChecked) {
-            // チェックON時：まだ【試合】が入っていなければ自動でテンプレ挿入
             if (!currentMemo.includes('【試合】')) {
                 memoEl.value = currentMemo.trim() ? `${template}\n\n${currentMemo}` : template;
             }
             if (dutyContainer) dutyContainer.style.display = 'none';
         } else {
-            // チェックOFF時：テンプレや【試合】タグを自動除去
             memoEl.value = currentMemo
                 .replace(template + '\n\n', '')
                 .replace(template, '')
@@ -745,6 +799,30 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
             if (dutyContainer) dutyContainer.style.display = 'block';
         }
         updatePracticeInfo(dateStr);
+        updateAttendancePreview(dateStr);
+    }
+
+    function copyAttendancePreviewNotice(dateStr) {
+        const previewBox = document.getElementById('attendance-preview-box');
+        if (!previewBox) return;
+
+        navigator.clipboard.writeText(previewBox.textContent).then(() => {
+            const btn = document.getElementById('copy-preview-btn');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                const originalBg = btn.style.backgroundColor;
+                
+                btn.innerHTML = '✨ コピー完了しました！';
+                btn.style.backgroundColor = '#2563eb';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = originalBg;
+                }, 2000);
+            }
+        }).catch(err => {
+            alert('コピーに失敗しました...');
+        });
     }
 
     function switchModalTab(tabName, event) {
@@ -752,6 +830,11 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
         document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
         event.target.classList.add('active');
         document.getElementById(tabName === 'attendance' ? 'tab-attendance' : 'tab-settings').classList.add('active');
+        
+        if (tabName === 'attendance') {
+            const modalDateTitle = document.getElementById('modal-date-title').textContent.split(' ')[0];
+            updateAttendancePreview(modalDateTitle);
+        }
     }
 
     function closeModal() {
@@ -790,8 +873,7 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
         localStorage.setItem('cache_attendance', JSON.stringify(attendanceData));
         closeModal();
     }
-
-    function updatePracticeStatus(dateStr) {
+function updatePracticeStatus(dateStr) {
         const isChecked = document.getElementById('modal-is-practice').checked;
         const isFeeChecked = document.getElementById('modal-is-fee') ? document.getElementById('modal-is-fee').checked : false;
 
@@ -824,12 +906,12 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
     }
 
     function updatePracticeInfo(dateStr) {
-        const start = document.getElementById('modal-start').value;
-        const end = document.getElementById('modal-end').value;
-        const memo = document.getElementById('modal-memo').value;
+        const start = document.getElementById('modal-start') ? document.getElementById('modal-start').value : '19:00';
+        const end = document.getElementById('modal-end') ? document.getElementById('modal-end').value : '21:00';
+        const memo = document.getElementById('modal-memo') ? document.getElementById('modal-memo').value : '';
         const dutyEl = document.getElementById('modal-duty');
         const duty = dutyEl ? dutyEl.value : "";
-        const isFee = document.getElementById('modal-is-fee').checked;
+        const isFee = document.getElementById('modal-is-fee') ? document.getElementById('modal-is-fee').checked : false;
 
         if (!practiceData[dateStr]) {
             practiceData[dateStr] = { isPractice: true };
@@ -854,6 +936,7 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
+        updateAttendancePreview(dateStr);
     }
 
     function removePractice(dateStr) {
@@ -949,7 +1032,8 @@ const footerBtnContainer = document.getElementById('modal-footer-btn-container')
         document.getElementById('save-btn').textContent = '追加する';
         document.getElementById('cancel-btn').style.display = 'none';
     }
-function deleteMasterItem(id) {
+
+    function deleteMasterItem(id) {
         if (!confirm('このメンバー（世帯）を削除してもよろしいですか？')) return;
 
         masterData = masterData.filter(item => item.id != id);
@@ -975,8 +1059,7 @@ function deleteMasterItem(id) {
             renderAttendanceList();
             return;
         }
-
-        const _t = new Date();
+const _t = new Date();
         const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
         let targetDate = practiceDates[0];
         let futureDates = practiceDates.filter(d => d >= todayStr);
@@ -1074,48 +1157,6 @@ function deleteMasterItem(id) {
                 const originalBg = btn.style.backgroundColor;
                 
                 btn.innerHTML = '✨ コピー完了しました！';
-                btn.style.backgroundColor = '#2563eb';
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.style.backgroundColor = originalBg;
-                }, 2000);
-            }
-        }).catch(err => {
-            alert('コピーに失敗しました...');
-        });
-    }
-
-    function copySinglePracticeNotice(dateStr) {
-        const start = document.getElementById('modal-start').value || '19:00';
-        const end = document.getElementById('modal-end').value || '21:00';
-        const memo = document.getElementById('modal-memo').value.trim();
-
-        const parts = dateStr.split('-');
-        const month = parseInt(parts[1], 10);
-        const day = parseInt(parts[2], 10);
-        
-        const dObj = new Date(parts[0], month - 1, day);
-        const weeks = ['日', '月', '火', '水', '木', '金', '土'];
-        const weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
-
-        let isGame = memo.includes('【試合】') || memo.includes('試合');
-        let headerTitle = isGame ? '【⚔️試合のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
-
-        let text = `${headerTitle}\n\n`;
-        text += `📅 ${month}月${day}日${weekStr}\n`;
-        text += `⏰ 時間: ${start}〜${end}\n`;
-        if (memo) {
-            text += `\n${memo}\n`;
-        }
-
-        navigator.clipboard.writeText(text).then(() => {
-            const btn = document.getElementById('copy-notice-btn');
-            if (btn) {
-                const originalText = btn.innerHTML;
-                const originalBg = btn.style.backgroundColor;
-                
-                btn.innerHTML = '✨ お知らせをコピーしました！';
                 btn.style.backgroundColor = '#2563eb';
                 
                 setTimeout(() => {
