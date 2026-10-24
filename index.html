@@ -1112,7 +1112,7 @@ function editMasterItem(id) {
         const weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
 
         let isGame = memo.includes('【試合】') || memo.includes('試合');
-        let headerTitle = isGame ? '【🏆試合・大会のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
+        let headerTitle = isGame ? '【⚔️試合のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
 
         let text = `${headerTitle}\n\n`;
         text += `📅 ${month}月${day}日${weekStr}\n`;
