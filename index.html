@@ -480,7 +480,7 @@
         else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
         renderDutyList();
     }
-  function renderCalendar() {
+      function renderCalendar() {
         updateGlobalFamilySelect();
         document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
         const grid = document.getElementById('calendar-grid');
@@ -541,7 +541,7 @@
             cell.onclick = () => openDayModal(dateStr);
             grid.appendChild(cell);
         }
-    }
+    } // 👈 ここで綺麗に1つの関数が終わるようにします
 
     function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
