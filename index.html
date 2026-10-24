@@ -133,7 +133,7 @@
             <h2 id="duty-month-title" style="margin:0; font-size: 1rem; white-space: nowrap; color: #f8fafc;">当番スケジュール一覧</h2>
             <button class="btn" onclick="changeDutyMonth(1)">次の月</button>
         </div>
-        <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。担当を設定・変更する場合はここから選んでください。</p>
+        <p style="font-size: 0.85rem; color: #94a3b8;">今月の当番割り当て一覧です。（試合の日は当番がないため表示されません）</p>
         <div id="duty-list-container"></div>
         <div style="margin-top: 1.5rem; text-align: center;">
             <button class="btn" onclick="copyDutyTextForLine()" style="background-color: #22c55e; font-size: 0.9rem; padding: 0.6rem 1.2rem; width: 100%;">📋 LINE用当番テキストをコピーする</button>
@@ -142,7 +142,7 @@
 
     <div id="view-attendance" class="view-section">
         <h2 style="color:#f8fafc;">出欠確認一覧</h2>
-        <label style="color:#94a3b8; display: block; margin-bottom: 0.3rem;">練習日選択: </label>
+        <label style="color:#94a3b8; display: block; margin-bottom: 0.3rem;">予定日選択: </label>
         <select id="attendance-date-select" onchange="renderAttendanceList()" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem; box-sizing: border-box;"></select>
         <div id="attendance-summary" class="summary-box"></div>
         <div id="attendance-list-container"></div>
@@ -209,7 +209,8 @@
             loadDataFromCloud(true);
         }
     });
-function checkPassword() {
+
+    function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -324,7 +325,6 @@ function checkPassword() {
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
             });
     }
-
     function sendToGAS(payload) {
         const url = GAS_URL + "?action=" + payload.action + 
                     "&date=" + encodeURIComponent(payload.date || '') + 
@@ -423,7 +423,8 @@ function checkPassword() {
             select.value = myFamilyId;
         }
     }
-function changeMyFamily() {
+
+    function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -542,18 +543,20 @@ function changeMyFamily() {
             grid.appendChild(cell);
         }
     }
-
-    function renderDutyList() {
+function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
+        // 練習日のうち、「試合」ではない日だけをフィルタリング
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
-            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+            let p = practiceData[d];
+            let isGame = (p && p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
+            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && p.isPractice && !isGame;
         }).sort();
 
         if (practiceDates.length === 0) {
-            container.innerHTML = '<p style="margin-top:1rem; color:#94a3b8;">この月の練習日は設定されていません。（カレンダーから練習日を追加してください）</p>';
+            container.innerHTML = '<p style="margin-top:1rem; color:#94a3b8;">この月は当番が必要な練習日がありません。</p>';
             return;
         }
 
@@ -566,8 +569,6 @@ function changeMyFamily() {
             
             let parts = dateStr.split('-');
             let shortDate = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : dateStr;
-            let isGame = (p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
-            let dateLabel = isGame ? `🏀 ${shortDate}` : shortDate;
             
             let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
             selectHtml += `<option value="">（未設定）</option>`;
@@ -581,7 +582,7 @@ function changeMyFamily() {
             });
             selectHtml += `</select>`;
 
-            html += `<tr><td><strong>${dateLabel}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
+            html += `<tr><td><strong>${shortDate}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
         });
         html += `</tbody></table>`;
         container.innerHTML = html;
@@ -668,6 +669,19 @@ function changeMyFamily() {
         let isFeeChecked = pData.isFeeDay ? 'checked' : '';
         let isGameChecked = (pData.memo && (pData.memo.includes('【試合】') || pData.memo.includes('試合'))) ? 'checked' : '';
 
+        // 試合の日は当番担当欄を非表示にする
+        let dutyFieldHtml = '';
+        if (!isGameChecked) {
+            dutyFieldHtml = `
+                <div style="margin-bottom: 0.75rem;" id="modal-duty-container">
+                    <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
+                    <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
+                        ${dutyOptions}
+                    </select>
+                </div>
+            `;
+        }
+
         let settingsHtml = `
             <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
                 <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
@@ -675,12 +689,7 @@ function changeMyFamily() {
                     <label style="cursor:pointer; font-weight:bold; color:#60a5fa;"><input type="checkbox" id="modal-is-game" ${isGameChecked} onchange="toggleGameTag('${dateStr}')"> 🏀 試合・大会</label>
                     <label style="cursor:pointer; font-weight:bold; color:#fde047;"><input type="checkbox" id="modal-is-fee" ${isFeeChecked} onchange="updatePracticeInfo('${dateStr}')"> ⭐️ 月謝日</label>
                 </div>
-                <div style="margin-bottom: 0.75rem;">
-                    <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
-                    <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
-                        ${dutyOptions}
-                    </select>
-                </div>
+                ${dutyFieldHtml}
                 <div style="margin-bottom: 0.75rem;">
                     <label style="color:#94a3b8;"><strong>時間:</strong></label><br>
                     <input type="time" id="modal-start" value="${pData.startTime || '19:00'}" onchange="updatePracticeInfo('${dateStr}')"> 〜 
@@ -716,7 +725,7 @@ function changeMyFamily() {
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
-                }
+    }
     function toggleGameTag(dateStr) {
         const isGameChecked = document.getElementById('modal-is-game').checked;
         const memoEl = document.getElementById('modal-memo');
@@ -730,6 +739,7 @@ function changeMyFamily() {
             memoEl.value = currentMemo.replace(/【試合】\n?|【試合】/g, '');
         }
         updatePracticeInfo(dateStr);
+        openDayModal(dateStr);
     }
 
     function insertGameTemplate(dateStr) {
@@ -745,6 +755,7 @@ function changeMyFamily() {
             memoEl.value = template + '\n\n' + memoEl.value;
         }
         updatePracticeInfo(dateStr);
+        openDayModal(dateStr);
     }
 
     function switchModalTab(tabName, event) {
@@ -827,7 +838,8 @@ function changeMyFamily() {
         const start = document.getElementById('modal-start').value;
         const end = document.getElementById('modal-end').value;
         const memo = document.getElementById('modal-memo').value;
-        const duty = document.getElementById('modal-duty').value;
+        const dutyEl = document.getElementById('modal-duty');
+        const duty = dutyEl ? dutyEl.value : "";
         const isFee = document.getElementById('modal-is-fee').checked;
 
         if (!practiceData[dateStr]) {
@@ -1005,7 +1017,7 @@ function editMasterItem(id) {
         const summaryBox = document.getElementById('attendance-summary');
         if(!select || !container || !summaryBox) return;
         const selectedDate = select.value;
-        if (!selectedDate) { summaryBox.innerHTML = ''; container.innerHTML = '<p>練習日がありません。</p>'; return; }
+        if (!selectedDate) { summaryBox.innerHTML = ''; container.innerHTML = '<p>予定日がありません。</p>'; return; }
 
         let allChildren = getAllChildren();
         let counts = { 参加: 0, 遅刻: 0, 欠席: 0 };
@@ -1033,13 +1045,16 @@ function editMasterItem(id) {
     }
 
     function copyDutyTextForLine() {
+        // 当番テキストコピー時も、試合の日は除外して純粋な練習日当番のみをリスト化
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
-            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && practiceData[d].isPractice;
+            let p = practiceData[d];
+            let isGame = (p && p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
+            return cleanD && cleanD.startsWith(`${dutyYear}-${String(dutyMonth + 1).padStart(2, '0')}`) && p.isPractice && !isGame;
         }).sort();
 
         if (practiceDates.length === 0) {
-            alert('この月の練習日は設定されていません。');
+            alert('この月は当番が必要な練習日がありません。');
             return;
         }
 
@@ -1058,15 +1073,8 @@ function editMasterItem(id) {
             let weeks = ['日', '月', '火', '水', '木', '金', '土'];
             let weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
 
-            let p = practiceData[dateStr];
-            let isGame = (p && p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
-
             let dutyName = dutyMap[dateStr] || '未設定';
-            if (isGame) {
-                text += `🏀 ${shortDate}${weekStr} (試合) ${dutyName}\n`;
-            } else {
-                text += `${shortDate}${weekStr} ${dutyName}\n`;
-            }
+            text += `${shortDate}${weekStr} ${dutyName}\n`;
         });
 
         text += `\n※時間の詳細はアプリでご確認ください\n`;
@@ -1104,7 +1112,7 @@ function editMasterItem(id) {
         const weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
 
         let isGame = memo.includes('【試合】') || memo.includes('試合');
-        let headerTitle = isGame ? '【🏀試合のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
+        let headerTitle = isGame ? '【🏆試合・大会のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
 
         let text = `${headerTitle}\n\n`;
         text += `📅 ${month}月${day}日${weekStr}\n`;
