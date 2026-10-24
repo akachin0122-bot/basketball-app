@@ -178,7 +178,7 @@
         
         <div id="modal-content"></div>
         
-        <div style="text-align: right; margin-top: 1.5rem;" id="modal-footer-btn-container"></div>
+        <div style="margin-top: 1.5rem;" id="modal-footer-btn-container"></div>
     </div>
 </div>
 
@@ -238,7 +238,7 @@
         }
         return str;
     }
-   function parseMasterData(rawMaster) {
+    function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -263,8 +263,7 @@
             localStorage.setItem('cache_master', JSON.stringify(masterData));
         }
     }
-
-    function loadDataFromCloud(isBackground = false) {
+function loadDataFromCloud(isBackground = false) {
         const statusEl = document.getElementById('sync-status');
         if(statusEl && !isBackground) statusEl.textContent = "（同期中...）";
         
@@ -477,7 +476,8 @@
         else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
         renderDutyList();
     }
-function renderCalendar() {
+
+    function renderCalendar() {
         updateGlobalFamilySelect();
         document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
         const grid = document.getElementById('calendar-grid');
@@ -538,8 +538,7 @@ function renderCalendar() {
             cell.onclick = () => openDayModal(dateStr);
             grid.appendChild(cell);
         }
-    }
-
+                                    }
     function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
@@ -674,16 +673,9 @@ function renderCalendar() {
                 </label>
                 <div id="attendance-memo-display" style="font-size: 0.85rem; color: #f8fafc; white-space: pre-wrap; line-height: 1.4;">${memoText}</div>
             </div>
-            
-            <!-- 管理者向け設定への切り替えボタン -->
-            <div style="text-align: center; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
-                <button onclick="toggleAdminSettings(true)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
-                    ⚙️ 予定・当番設定を開く（管理者向け）
-                </button>
-            </div>
         </div>`;
 
-    let isPracChecked = pData.isPractice ? 'checked' : '';
+        let isPracChecked = pData.isPractice ? 'checked' : '';
         let isFeeChecked = pData.isFeeDay ? 'checked' : '';
         let isGameChecked = (pData.memo && (pData.memo.includes('【試合】') || pData.memo.includes('試合'))) ? 'checked' : '';
 
@@ -697,7 +689,7 @@ function renderCalendar() {
             </div>
         `;
 
-        // 管理者向け設定画面（普段は隠れています）
+        // 管理者向け設定画面
         let settingsHtml = `
             <div id="modal-view-settings" style="display: none;">
                 <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
@@ -720,7 +712,7 @@ function renderCalendar() {
                 </div>
                 <button class="btn btn-danger" onclick="removePractice('${dateStr}')" style="width: 100%;">この日の予定を完全に消去</button>
                 
-                <div style="text-align: center; margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">
+                <div style="text-align: right; margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 0.75rem;" id="back-to-attendance-link">
                     <button onclick="toggleAdminSettings(false)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
                         ◀️ 出欠画面に戻る
                     </button>
@@ -730,22 +722,47 @@ function renderCalendar() {
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
 
+        // フッター部分（登録するボタン ＋ 右下に設定を開くリンク）
         const footerBtnContainer = document.getElementById('modal-footer-btn-container');
-        footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')" style="width: 100%;">登録する</button>`;
+        footerBtnContainer.innerHTML = `
+            <button class="btn" onclick="saveAllModalData('${dateStr}')" style="width: 100%;" id="modal-save-btn">登録する</button>
+            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;" id="open-admin-link">
+                <button onclick="toggleAdminSettings(true)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    ⚙️ 予定・当番設定を開く（管理者向け）
+                </button>
+            </div>
+        `;
 
         modal.style.display = 'flex';
+
+        // ★ここがポイント：練習日がない日の場合は、最初から「設定画面（管理者向け）」を開いた状態にする
+        if (!pData.isPractice) {
+            toggleAdminSettings(true);
+        } else {
+            toggleAdminSettings(false);
+        }
     }
 
     function toggleAdminSettings(showAdmin) {
         const attView = document.getElementById('modal-view-attendance');
         const setView = document.getElementById('modal-view-settings');
+        const saveBtn = document.getElementById('modal-save-btn');
+        const openLink = document.getElementById('open-admin-link');
+        const backLink = document.getElementById('back-to-attendance-link');
+
         if (attView && setView) {
             if (showAdmin) {
                 attView.style.display = 'none';
                 setView.style.display = 'block';
+                if (saveBtn) saveBtn.style.display = 'none'; // 設定画面のときは通常の登録ボタンを隠す（設定内の変更は自動保存または予定ありチェックで行うため）
+                if (openLink) openLink.style.display = 'none';
+                if (backLink) backLink.style.display = 'block';
             } else {
                 attView.style.display = 'block';
                 setView.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'block'; // 出欠画面のときは登録ボタンを表示
+                if (openLink) openLink.style.display = 'flex';
+                if (backLink) backLink.style.display = 'none';
             }
         }
     }
@@ -772,8 +789,7 @@ function renderCalendar() {
         }
         updatePracticeInfo(dateStr);
     }
-
-    function copySinglePracticeNotice(dateStr) {
+function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
@@ -926,7 +942,8 @@ function renderCalendar() {
             memoDisplay.textContent = memo.trim() ? memo.trim() : "（特に連絡事項はありません）";
         }
     }
-function removePractice(dateStr) {
+
+    function removePractice(dateStr) {
         if (!confirm('本当にこの日の予定を完全に消去しますか？')) return;
         
         delete practiceData[dateStr];
@@ -1010,8 +1027,7 @@ function removePractice(dateStr) {
         document.getElementById('save-btn').textContent = '保存する';
         document.getElementById('cancel-btn').style.display = 'inline-block';
     }
-
-    function resetMasterForm() {
+function resetMasterForm() {
         document.getElementById('edit-id').value = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
