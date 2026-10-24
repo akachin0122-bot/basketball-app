@@ -538,8 +538,8 @@ function loadDataFromCloud(isBackground = false) {
             cell.onclick = () => openDayModal(dateStr);
             grid.appendChild(cell);
         }
-                                    }
-    function renderDutyList() {
+    }
+function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
@@ -722,20 +722,20 @@ function loadDataFromCloud(isBackground = false) {
 
         contentDiv.innerHTML = attendanceHtml + settingsHtml;
 
-        // フッター部分（登録するボタン ＋ 右下に設定を開くリンク）
+        // フッター部分（登録するボタン ＋ 右下の「⚙️予定詳細設定」ボタン）
         const footerBtnContainer = document.getElementById('modal-footer-btn-container');
         footerBtnContainer.innerHTML = `
             <button class="btn" onclick="saveAllModalData('${dateStr}')" style="width: 100%;" id="modal-save-btn">登録する</button>
             <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;" id="open-admin-link">
-                <button onclick="toggleAdminSettings(true)" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
-                    ⚙️ 予定・当番設定を開く（管理者向け）
+                <button class="btn btn-secondary" onclick="toggleAdminSettings(true)" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; background-color: #334155; color: #f8fafc;">
+                    ⚙️ 予定詳細設定
                 </button>
             </div>
         `;
 
         modal.style.display = 'flex';
 
-        // ★ここがポイント：練習日がない日の場合は、最初から「設定画面（管理者向け）」を開いた状態にする
+        // 練習日がない日は最初から設定画面（管理者向け）を開く
         if (!pData.isPractice) {
             toggleAdminSettings(true);
         } else {
@@ -754,13 +754,13 @@ function loadDataFromCloud(isBackground = false) {
             if (showAdmin) {
                 attView.style.display = 'none';
                 setView.style.display = 'block';
-                if (saveBtn) saveBtn.style.display = 'none'; // 設定画面のときは通常の登録ボタンを隠す（設定内の変更は自動保存または予定ありチェックで行うため）
+                if (saveBtn) saveBtn.style.display = 'none';
                 if (openLink) openLink.style.display = 'none';
                 if (backLink) backLink.style.display = 'block';
             } else {
                 attView.style.display = 'block';
                 setView.style.display = 'none';
-                if (saveBtn) saveBtn.style.display = 'block'; // 出欠画面のときは登録ボタンを表示
+                if (saveBtn) saveBtn.style.display = 'block';
                 if (openLink) openLink.style.display = 'flex';
                 if (backLink) backLink.style.display = 'none';
             }
@@ -1027,7 +1027,8 @@ function copySinglePracticeNotice(dateStr) {
         document.getElementById('save-btn').textContent = '保存する';
         document.getElementById('cancel-btn').style.display = 'inline-block';
     }
-function resetMasterForm() {
+
+    function resetMasterForm() {
         document.getElementById('edit-id').value = '';
         document.getElementById('child-1').value = '';
         document.getElementById('child-2').value = '';
@@ -1052,8 +1053,7 @@ function resetMasterForm() {
         saveDataToCloud();
         localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
-
-    function updateAttendanceSelect() {
+function updateAttendanceSelect() {
         const select = document.getElementById('attendance-date-select');
         if(!select) return;
         select.innerHTML = '';
