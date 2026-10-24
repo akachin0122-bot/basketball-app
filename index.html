@@ -480,8 +480,7 @@
         else if (dutyMonth < 0) { dutyMonth = 11; dutyYear--; }
         renderDutyList();
     }
-function renderCalendar() {
-    function renderCalendar() {
+  function renderCalendar() {
         updateGlobalFamilySelect();
         document.getElementById('calendar-title').textContent = `${currentYear}年 ${currentMonth + 1}月`;
         const grid = document.getElementById('calendar-grid');
