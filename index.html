@@ -668,9 +668,13 @@ function renderCalendar() {
         }
 
         // 📍 本日の連絡・備考（会場など）を出欠選択枠の下に配置
+                // ⏰ 時間と 📍 本日の連絡・備考を出欠選択枠の下に配置
         attendanceHtml += `
             <div style="background: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px dashed #3b82f6;">
-                <label style="color: #60a5fa; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 0.3rem;">
+                <label style="color: #60a5fa; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 0.2rem;">
+                    ⏰ 時間: <span id="attendance-time-display">${timeText}</span>
+                </label>
+                <label style="color: #60a5fa; font-size: 0.85rem; font-weight: bold; display: block; margin-top: 0.5rem; margin-bottom: 0.3rem;">
                     📍 本日の連絡・備考（会場など）:
                 </label>
                 <div id="attendance-memo-display" style="font-size: 0.85rem; color: #f8fafc; white-space: pre-wrap; line-height: 1.4;">${memoText}</div>
@@ -908,7 +912,12 @@ function toggleGameTag(dateStr) {
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
 
-        // 出欠タブの備考表示も更新
+              // 出欠タブの時間・備考表示も更新
+        const timeDisplay = document.getElementById('attendance-time-display');
+        if (timeDisplay) {
+            timeDisplay.textContent = `${start} 〜 ${end}`;
+        }
+
         const memoDisplay = document.getElementById('attendance-memo-display');
         if (memoDisplay) {
             memoDisplay.textContent = memo.trim() ? memo.trim() : "（特に連絡事項はありません）";
