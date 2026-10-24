@@ -230,8 +230,7 @@
     let currentMonth = _todayInit.getMonth(); 
     let dutyYear = _todayInit.getFullYear();
     let dutyMonth = _todayInit.getMonth();
-
-    function cleanDateStr(rawDate) {
+function cleanDateStr(rawDate) {
         if (!rawDate) return '';
         let str = String(rawDate).trim();
         if (str.includes('T')) str = str.split('T')[0];
@@ -325,6 +324,7 @@
                 if(statusEl) statusEl.textContent = "（オフライン稼働）";
             });
     }
+
     function sendToGAS(payload) {
         const url = GAS_URL + "?action=" + payload.action + 
                     "&date=" + encodeURIComponent(payload.date || '') + 
@@ -456,8 +456,7 @@
         else if (viewName === 'attendance') updateAttendanceSelect();
         else if (viewName === 'master') { renderMasterTable(); resetMasterForm(); }
     }
-
-    function changeMonth(direction) {
+function changeMonth(direction) {
         let nextMonth = currentMonth + direction;
         let nextYear = currentYear;
         if (nextMonth > 11) { nextMonth = 0; nextYear++; }
@@ -543,11 +542,11 @@
             grid.appendChild(cell);
         }
     }
-function renderDutyList() {
+
+    function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
-        // 練習日のうち、「試合」ではない日だけをフィルタリング
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
             let p = practiceData[d];
@@ -669,18 +668,15 @@ function renderDutyList() {
         let isFeeChecked = pData.isFeeDay ? 'checked' : '';
         let isGameChecked = (pData.memo && (pData.memo.includes('【試合】') || pData.memo.includes('試合'))) ? 'checked' : '';
 
-        // 試合の日は当番担当欄を非表示にする
-        let dutyFieldHtml = '';
-        if (!isGameChecked) {
-            dutyFieldHtml = `
-                <div style="margin-bottom: 0.75rem;" id="modal-duty-container">
-                    <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
-                    <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
-                        ${dutyOptions}
-                    </select>
-                </div>
-            `;
-        }
+        let dutyDisplay = isGameChecked ? 'none' : 'block';
+        let dutyFieldHtml = `
+            <div style="margin-bottom: 0.75rem; display: ${dutyDisplay};" id="modal-duty-container">
+                <label style="color:#94a3b8;"><strong>当番担当:</strong></label><br>
+                <select id="modal-duty" onchange="updatePracticeInfo('${dateStr}')" style="margin-top: 4px; width: 100%;">
+                    ${dutyOptions}
+                </select>
+            </div>
+        `;
 
         let settingsHtml = `
             <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
@@ -698,7 +694,7 @@ function renderDutyList() {
                 <div style="margin-bottom: 0.75rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.3rem;">
                         <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label>
-                        <button type="button" class="btn btn-secondary" onclick="insertGameTemplate('${dateStr}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">🏆 試合テンプレ挿入</button>
+                        <button type="button" class="btn btn-secondary" onclick="insertGameTemplate('${dateStr}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">⚔️ 試合テンプレ挿入</button>
                     </div>
                     <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%; box-sizing:border-box;">${pData.memo || ''}</textarea>
                 </div>
@@ -708,8 +704,7 @@ function renderDutyList() {
                 <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の予定を完全に消去</button>
             </div>
         `;
-
-        if (pData.isPractice) {
+if (pData.isPractice) {
             tabsHeader.style.display = 'flex';
             tabsHeader.innerHTML = `
                 <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
@@ -726,26 +721,32 @@ function renderDutyList() {
 
         modal.style.display = 'flex';
     }
+
     function toggleGameTag(dateStr) {
         const isGameChecked = document.getElementById('modal-is-game').checked;
         const memoEl = document.getElementById('modal-memo');
+        const dutyContainer = document.getElementById('modal-duty-container');
         let currentMemo = memoEl.value;
 
         if (isGameChecked) {
             if (!currentMemo.includes('【試合】')) {
                 memoEl.value = '【試合】\n' + currentMemo;
             }
+            if (dutyContainer) dutyContainer.style.display = 'none';
         } else {
             memoEl.value = currentMemo.replace(/【試合】\n?|【試合】/g, '');
+            if (dutyContainer) dutyContainer.style.display = 'block';
         }
         updatePracticeInfo(dateStr);
-        openDayModal(dateStr);
     }
 
     function insertGameTemplate(dateStr) {
         const memoEl = document.getElementById('modal-memo');
         const gameCheckbox = document.getElementById('modal-is-game');
+        const dutyContainer = document.getElementById('modal-duty-container');
+        
         if (gameCheckbox) gameCheckbox.checked = true;
+        if (dutyContainer) dutyContainer.style.display = 'none';
 
         let template = `【試合】\n📍 会場：\n⏰ 集合時間：\n🚗 配車・駐車場：\n🎒 持ち物：ユニフォーム（濃・淡）、昼食、飲み物\n📌 その他ルール：`;
         
@@ -755,7 +756,6 @@ function renderDutyList() {
             memoEl.value = template + '\n\n' + memoEl.value;
         }
         updatePracticeInfo(dateStr);
-        openDayModal(dateStr);
     }
 
     function switchModalTab(tabName, event) {
@@ -1045,7 +1045,6 @@ function editMasterItem(id) {
     }
 
     function copyDutyTextForLine() {
-        // 当番テキストコピー時も、試合の日は除外して純粋な練習日当番のみをリスト化
         let practiceDates = Object.keys(practiceData).filter(d => {
             let cleanD = cleanDateStr(d);
             let p = practiceData[d];
