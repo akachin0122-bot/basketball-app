@@ -47,6 +47,7 @@
         .practice-info-box { text-align: center; margin-top: auto; margin-bottom: auto; }
         .practice-dot { display: inline-block; color: #94a3b8; font-size: 1.3rem; font-weight: bold; line-height: 1; }
         .practice-dot.my-dot { color: #f43f5e; } 
+        .game-badge { font-size: 1.1rem; line-height: 1; }
         
         button.btn { background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button.btn:hover { background-color: #1d4ed8; }
@@ -89,7 +90,7 @@
 
 <div id="auth-overlay">
     <div class="auth-card">
-        <h2>​HN 🏀 ROSTER & DUTY</h2>
+        <h2>HN 🏀 ROSTER & DUTY</h2>
         <p>利用するための「合言葉」を入力してください</p>
         <input type="password" id="auth-pass" placeholder="合言葉を入力" onkeydown="if(event.key==='Enter') checkPassword()">
         <button class="btn" onclick="checkPassword()">認証する</button>
@@ -98,7 +99,7 @@
 </div>
 
 <header>
-    <h1>​HN 🏀 ROSTER & DUTY <span id="sync-status"></span></h1>
+    <h1>HN 🏀 ROSTER & DUTY <span id="sync-status"></span></h1>
     <div class="family-selector-box">
         <span>👤 わが家:</span>
         <select id="global-my-family" onchange="changeMyFamily()"></select>
@@ -121,7 +122,7 @@
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
         <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や設定ができます。（⭐️は月謝日です）</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">💡 日付をタップすると出欠連絡や設定ができます。（🏀は試合・大会、⭐️は月謝日です）</p>
             <button class="btn btn-warning" onclick="bulkAddTueWedFri()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">火水金一括登録</button>
         </div>
     </div> 
@@ -208,8 +209,7 @@
             loadDataFromCloud(true);
         }
     });
-
-    function checkPassword() {
+function checkPassword() {
         const inputVal = document.getElementById('auth-pass').value.trim();
         const errorEl = document.getElementById('auth-error');
         if (inputVal === CORRECT_PASS) {
@@ -240,7 +240,8 @@
         }
         return str;
     }
-function parseMasterData(rawMaster) {
+
+    function parseMasterData(rawMaster) {
         if (!rawMaster || !Array.isArray(rawMaster) || rawMaster.length === 0) return;
         let parsed = [];
         rawMaster.forEach(item => {
@@ -422,8 +423,7 @@ function parseMasterData(rawMaster) {
             select.value = myFamilyId;
         }
     }
-
-    function changeMyFamily() {
+function changeMyFamily() {
         const select = document.getElementById('global-my-family');
         if(select) {
             myFamilyId = Number(select.value);
@@ -527,8 +527,11 @@ function parseMasterData(rawMaster) {
                     cell.classList.add('my-duty');
                 }
                 
-                // 月謝日であっても通常通り ● ドットを表示する
-                if (isMyDuty) {
+                let isGame = (pInfo.memo && (pInfo.memo.includes('【試合】') || pInfo.memo.includes('試合')));
+
+                if (isGame) {
+                    html += `<div class="practice-info-box"><span class="game-badge">🏀</span></div>`;
+                } else if (isMyDuty) {
                     html += `<div class="practice-info-box"><span class="practice-dot my-dot">●</span></div>`;
                 } else {
                     html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
@@ -539,7 +542,8 @@ function parseMasterData(rawMaster) {
             grid.appendChild(cell);
         }
     }
-function renderDutyList() {
+
+    function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
         const container = document.getElementById('duty-list-container');
         
@@ -555,13 +559,15 @@ function renderDutyList() {
 
         let dutyMap = getDutyMapForYearMonth(dutyYear, dutyMonth);
 
-        let html = `<table><thead><tr><th style="width:22%;">練習日</th><th style="width:25%;">時間</th><th style="width:53%;">担当当番</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th style="width:22%;">日程</th><th style="width:25%;">時間</th><th style="width:53%;">担当当番</th></tr></thead><tbody>`;
         practiceDates.forEach(dateStr => {
             let p = practiceData[dateStr];
             let currentDuty = dutyMap[dateStr] || "";
             
             let parts = dateStr.split('-');
             let shortDate = parts.length >= 3 ? `${parts[1]}-${parts[2]}` : dateStr;
+            let isGame = (p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
+            let dateLabel = isGame ? `🏀 ${shortDate}` : shortDate;
             
             let selectHtml = `<select onchange="updateDutyFromList('${dateStr}', this.value)" style="width:100%;">`;
             selectHtml += `<option value="">（未設定）</option>`;
@@ -575,7 +581,7 @@ function renderDutyList() {
             });
             selectHtml += `</select>`;
 
-            html += `<tr><td><strong>${shortDate}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
+            html += `<tr><td><strong>${dateLabel}</strong></td><td>${p.startTime || '19:00'}〜${p.endTime || '21:00'}</td><td>${selectHtml}</td></tr>`;
         });
         html += `</tbody></table>`;
         container.innerHTML = html;
@@ -660,10 +666,13 @@ function renderDutyList() {
 
         let isPracChecked = pData.isPractice ? 'checked' : '';
         let isFeeChecked = pData.isFeeDay ? 'checked' : '';
+        let isGameChecked = (pData.memo && (pData.memo.includes('【試合】') || pData.memo.includes('試合'))) ? 'checked' : '';
+
         let settingsHtml = `
             <div class="modal-tab-content ${!pData.isPractice ? 'active' : ''}" id="tab-settings">
                 <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>この日を練習日にする</strong></label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>予定あり</strong></label>
+                    <label style="cursor:pointer; font-weight:bold; color:#60a5fa;"><input type="checkbox" id="modal-is-game" ${isGameChecked} onchange="toggleGameTag('${dateStr}')"> 🏀 試合・大会</label>
                     <label style="cursor:pointer; font-weight:bold; color:#fde047;"><input type="checkbox" id="modal-is-fee" ${isFeeChecked} onchange="updatePracticeInfo('${dateStr}')"> ⭐️ 月謝日</label>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
@@ -673,18 +682,21 @@ function renderDutyList() {
                     </select>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <label style="color:#94a3b8;"><strong>練習時間:</strong></label><br>
+                    <label style="color:#94a3b8;"><strong>時間:</strong></label><br>
                     <input type="time" id="modal-start" value="${pData.startTime || '19:00'}" onchange="updatePracticeInfo('${dateStr}')"> 〜 
                     <input type="time" id="modal-end" value="${pData.endTime || '21:00'}" onchange="updatePracticeInfo('${dateStr}')">
                 </div>
                 <div style="margin-bottom: 0.75rem;">
-                    <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label><br>
-                    <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%;">${pData.memo || ''}</textarea>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.3rem;">
+                        <label style="color:#94a3b8;"><strong>備考（お知らせなど）:</strong></label>
+                        <button type="button" class="btn btn-secondary" onclick="insertGameTemplate('${dateStr}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">🏆 試合テンプレ挿入</button>
+                    </div>
+                    <textarea id="modal-memo" rows="7" onchange="updatePracticeInfo('${dateStr}')" style="width: 100%; box-sizing:border-box;">${pData.memo || ''}</textarea>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <button class="btn" onclick="copySinglePracticeNotice('${dateStr}')" style="background-color: #22c55e; width: 100%; padding: 0.5rem;">📢 LINE用練習日追加のお知らせをコピー</button>
+                    <button class="btn" onclick="copySinglePracticeNotice('${dateStr}')" style="background-color: #22c55e; width: 100%; padding: 0.5rem;" id="copy-notice-btn">📢 LINE用お知らせをコピー</button>
                 </div>
-                <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の練習を完全に消去</button>
+                <button class="btn btn-danger" onclick="removePractice('${dateStr}')">この日の予定を完全に消去</button>
             </div>
         `;
 
@@ -692,7 +704,7 @@ function renderDutyList() {
             tabsHeader.style.display = 'flex';
             tabsHeader.innerHTML = `
                 <button class="modal-tab-btn active" onclick="switchModalTab('attendance', event)">📋 わが家の出欠</button>
-                <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 練習・当番設定</button>
+                <button class="modal-tab-btn" onclick="switchModalTab('settings', event)">⚙️ 予定・当番設定</button>
             `;
             contentDiv.innerHTML = attendanceHtml + settingsHtml;
         } else {
@@ -704,6 +716,35 @@ function renderDutyList() {
         footerBtnContainer.innerHTML = `<button class="btn" onclick="saveAllModalData('${dateStr}')">登録</button>`;
 
         modal.style.display = 'flex';
+                }
+    function toggleGameTag(dateStr) {
+        const isGameChecked = document.getElementById('modal-is-game').checked;
+        const memoEl = document.getElementById('modal-memo');
+        let currentMemo = memoEl.value;
+
+        if (isGameChecked) {
+            if (!currentMemo.includes('【試合】')) {
+                memoEl.value = '【試合】\n' + currentMemo;
+            }
+        } else {
+            memoEl.value = currentMemo.replace(/【試合】\n?|【試合】/g, '');
+        }
+        updatePracticeInfo(dateStr);
+    }
+
+    function insertGameTemplate(dateStr) {
+        const memoEl = document.getElementById('modal-memo');
+        const gameCheckbox = document.getElementById('modal-is-game');
+        if (gameCheckbox) gameCheckbox.checked = true;
+
+        let template = `【試合】\n📍 会場：\n⏰ 集合時間：\n🚗 配車・駐車場：\n🎒 持ち物：ユニフォーム（濃・淡）、昼食、飲み物\n📌 その他ルール：`;
+        
+        if (!memoEl.value.trim()) {
+            memoEl.value = template;
+        } else if (!memoEl.value.includes('【試合】')) {
+            memoEl.value = template + '\n\n' + memoEl.value;
+        }
+        updatePracticeInfo(dateStr);
     }
 
     function switchModalTab(tabName, event) {
@@ -812,7 +853,8 @@ function renderDutyList() {
 
         localStorage.setItem('cache_practices', JSON.stringify(practiceData));
         renderCalendar();
-        }
+    }
+
     function removePractice(dateStr) {
         delete practiceData[dateStr];
         
@@ -882,8 +924,7 @@ function renderDutyList() {
         saveDataToCloud();
         localStorage.setItem('cache_master', JSON.stringify(masterData));
     }
-
-    function editMasterItem(id) {
+function editMasterItem(id) {
         let item = masterData.find(m => m.id == id);
         if (!item) return;
         document.getElementById('edit-id').value = item.id;
@@ -947,7 +988,9 @@ function renderDutyList() {
         practiceDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d;
-            opt.textContent = `${d} (${practiceData[d].startTime || '19:00'}-${practiceData[d].endTime || '21:00'})`;
+            let isGame = (practiceData[d].memo && (practiceData[d].memo.includes('【試合】') || practiceData[d].memo.includes('試合')));
+            let labelPrefix = isGame ? '🏀【試合】' : '';
+            opt.textContent = `${labelPrefix}${d} (${practiceData[d].startTime || '19:00'}-${practiceData[d].endTime || '21:00'})`;
             if (d === targetDate) {
                 opt.selected = true;
             }
@@ -1015,11 +1058,18 @@ function renderDutyList() {
             let weeks = ['日', '月', '火', '水', '木', '金', '土'];
             let weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
 
+            let p = practiceData[dateStr];
+            let isGame = (p && p.memo && (p.memo.includes('【試合】') || p.memo.includes('試合')));
+
             let dutyName = dutyMap[dateStr] || '未設定';
-            text += `${shortDate}${weekStr} ${dutyName}\n`;
+            if (isGame) {
+                text += `🏀 ${shortDate}${weekStr} (試合) ${dutyName}\n`;
+            } else {
+                text += `${shortDate}${weekStr} ${dutyName}\n`;
+            }
         });
 
-        text += `※練習時間はアプリでご確認ください\n`;
+        text += `\n※時間の詳細はアプリでご確認ください\n`;
 
         navigator.clipboard.writeText(text).then(() => {
             const btn = document.querySelector('button[onclick="copyDutyTextForLine()"]');
@@ -1039,7 +1089,8 @@ function renderDutyList() {
             alert('コピーに失敗しました...');
         });
     }
-function copySinglePracticeNotice(dateStr) {
+
+    function copySinglePracticeNotice(dateStr) {
         const start = document.getElementById('modal-start').value || '19:00';
         const end = document.getElementById('modal-end').value || '21:00';
         const memo = document.getElementById('modal-memo').value.trim();
@@ -1052,26 +1103,32 @@ function copySinglePracticeNotice(dateStr) {
         const weeks = ['日', '月', '火', '水', '木', '金', '土'];
         const weekStr = weeks[dObj.getDay()] ? `(${weeks[dObj.getDay()]})` : '';
 
-        let text = `【🏀練習日追加のお知らせ🏀】\n\n`;
+        let isGame = memo.includes('【試合】') || memo.includes('試合');
+        let headerTitle = isGame ? '【🏀試合のお知らせ🏀】' : '【🏀練習日のお知らせ🏀】';
+
+        let text = `${headerTitle}\n\n`;
         text += `📅 ${month}月${day}日${weekStr}\n`;
         text += `⏰ 時間: ${start}〜${end}\n`;
         if (memo) {
-            text += `📌 備考: ${memo}\n`;
+            text += `\n${memo}\n`;
         }
 
         navigator.clipboard.writeText(text).then(() => {
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            const originalBg = btn.style.backgroundColor;
-            
-            btn.innerHTML = '✨ お知らせをコピーしました！';
-            btn.style.backgroundColor = '#2563eb';
-            
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.style.backgroundColor = originalBg;
-            }, 2000);
+            const btn = document.getElementById('copy-notice-btn');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                const originalBg = btn.style.backgroundColor;
+                
+                btn.innerHTML = '✨ お知らせをコピーしました！';
+                btn.style.backgroundColor = '#2563eb';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = originalBg;
+                }, 2000);
+            }
         }).catch(err => {
+            alert('コピーに失敗しました...');
         });
     }
 </script>
