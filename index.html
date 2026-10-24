@@ -693,7 +693,7 @@ function renderDutyList() {
         let settingsHtml = `
             <div id="modal-view-settings" style="display: none;">
                 <div style="margin-bottom: 0.75rem; background: #854d0e; padding: 0.5rem; border-radius: 4px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>予定あり</strong></label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="modal-is-practice" ${isPracChecked} onchange="updatePracticeStatus('${dateStr}')"> <strong>練習日</strong></label>
                     <label style="cursor:pointer; font-weight:bold; color:#60a5fa;"><input type="checkbox" id="modal-is-game" ${isGameChecked} onchange="toggleGameTag('${dateStr}')"> 🏀 試合・大会</label>
                     <label style="cursor:pointer; font-weight:bold; color:#fde047;"><input type="checkbox" id="modal-is-fee" ${isFeeChecked} onchange="updatePracticeInfo('${dateStr}')"> ⭐️ 月謝日</label>
                 </div>
