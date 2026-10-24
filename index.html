@@ -536,12 +536,12 @@ function renderCalendar() {
                 } else {
                     html += `<div class="practice-info-box"><span class="practice-dot">●</span></div>`;
                 }
-            }
+                }
+                
             cell.innerHTML = html;
             cell.onclick = () => openDayModal(dateStr);
             grid.appendChild(cell);
         }
-    }
 
     function renderDutyList() {
         document.getElementById('duty-month-title').textContent = `${dutyYear}年 ${dutyMonth + 1}月 当番一覧`;
